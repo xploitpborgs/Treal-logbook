@@ -1,0 +1,32 @@
+# A05: Production security headers (Netlify / Cloudflare Pages format)
+# Vercel users: mirror these in vercel.json under "headers"
+
+/*
+  # A05 – Clickjacking prevention
+  X-Frame-Options: DENY
+
+  # A05 – MIME-type sniffing prevention
+  X-Content-Type-Options: nosniff
+
+  # A02 – Limit referrer data sent cross-origin
+  Referrer-Policy: strict-origin-when-cross-origin
+
+  # A05 – Restrict browser feature access
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
+
+  # A05 – Legacy XSS filter (belt-and-suspenders for older browsers)
+  X-XSS-Protection: 1; mode=block
+
+  # A05 – Prevent cross-origin window access attacks
+  Cross-Origin-Opener-Policy: same-origin
+
+  # A02 – Force HTTPS for 1 year (enable once the domain has a valid TLS cert)
+  Strict-Transport-Security: max-age=31536000; includeSubDomains; preload
+
+  # A03/A05 – Content Security Policy
+  # script-src 'self'        → only our own bundled JS (no inline scripts, no CDN)
+  # style-src 'unsafe-inline' → Tailwind + shadcn + recharts use inline styles
+  # connect-src              → Supabase REST + Realtime WebSocket
+  # worker-src blob:          → PWA service worker registered via blob URL
+  # frame-ancestors 'none'   → redundant with X-Frame-Options but defence-in-depth
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; worker-src 'self' blob:
