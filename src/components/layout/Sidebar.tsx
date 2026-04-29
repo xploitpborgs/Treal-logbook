@@ -1,21 +1,22 @@
 import { useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import {
-  BookOpen,
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
   LogOut,
+  Megaphone,
+  MessageSquarePlus,
   PlusCircle,
   Settings,
-  ShieldAlert,
-  User,
 } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
-import { useAuthContext } from '@/lib/AuthContext'
-import { DEPT_LABELS } from '@/lib/constants'
-import { cn, getInitials } from '@/lib/utils'
 import { useNavigate } from '@tanstack/react-router'
+import { useAuthContext } from '@/lib/AuthContext'
+import { useRole } from '@/hooks/useRole'
+import { cn } from '@/lib/utils'
+import { formatDepartment, formatRole, getInitials } from '@/lib/formatters'
+import { Badge } from '@/components/ui/badge'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,45 +26,41 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 
-// ─── Nav items config ──────────────────────────────────────────────────────
+// ─── Types ─────────────────────────────────────────────────────────────────
 
 interface NavItem {
   label: string
   icon: LucideIcon
   to: string
-  adminOnly?: boolean    // gm + system_admin
-  sysAdminOnly?: boolean // system_admin only
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard',        icon: LayoutDashboard, to: '/dashboard' },
-  { label: 'New Entry',        icon: PlusCircle,      to: '/entries/new' },
-  { label: 'All Entries',      icon: BookOpen,        to: '/entries/' },
-  { label: 'Profile Settings', icon: User,            to: '/profile' },
-  { label: 'Admin Panel',      icon: Settings,        to: '/admin',    adminOnly: true },
-  { label: 'Security Monitor', icon: ShieldAlert,     to: '/security', sysAdminOnly: true },
-]
+// ─── Role badge colors (dark sidebar bg) ───────────────────────────────────
 
-// ─── Single nav link ───────────────────────────────────────────────────────
+const ROLE_BADGE_DARK: Record<string, string> = {
+  staff:        'bg-zinc-700 text-zinc-300',
+  supervisor:   'bg-blue-500/20 text-blue-400',
+  gm:           'bg-amber-500/20 text-amber-400',
+  hr:           'bg-purple-500/20 text-purple-400',
+  system_admin: 'bg-[#C41E3A]/20 text-[#C41E3A]',
+}
 
-interface NavLinkProps {
+// ─── Single nav link ────────────────────────────────────────────────────────
+
+function NavLink({
+  item,
+  isCollapsed,
+  onClick,
+}: {
   item: NavItem
   isCollapsed: boolean
   onClick?: () => void
-}
-
-function NavLink({ item, isCollapsed, onClick }: NavLinkProps) {
+}) {
   const { location } = useRouterState()
-
   const isActive =
-    item.to === '/entries/'
-      ? location.pathname.startsWith('/entries') &&
-        !location.pathname.startsWith('/entries/new')
-      : location.pathname === item.to ||
-        location.pathname === item.to.replace(/\/$/, '')
+    location.pathname === item.to ||
+    (item.to !== '/dashboard' && location.pathname.startsWith(item.to))
 
   return (
     <Link
@@ -72,15 +69,13 @@ function NavLink({ item, isCollapsed, onClick }: NavLinkProps) {
       className={cn(
         'relative flex w-full transition-colors duration-150',
         isActive
-          ? 'bg-brand/10 text-brand'
+          ? 'bg-[#C41E3A]/10 text-[#C41E3A]'
           : 'text-zinc-400 hover:bg-zinc-800 hover:text-white',
       )}
     >
-      {/* Left active indicator */}
       {isActive && (
-        <span className="absolute inset-y-0 left-0 w-0.5 rounded-r-full bg-brand" />
+        <span className="absolute inset-y-0 left-0 w-0.5 rounded-r-full bg-[#C41E3A]" />
       )}
-
       <div
         className={cn(
           'flex w-full items-center',
@@ -96,146 +91,126 @@ function NavLink({ item, isCollapsed, onClick }: NavLinkProps) {
   )
 }
 
-// ─── Sidebar ───────────────────────────────────────────────────────────────
+// ─── Sidebar ────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
   isCollapsed: boolean
   onToggle: () => void
   isMobile?: boolean
-  /** Called after a nav link is clicked — used to close mobile sheet */
   onNavigate?: () => void
 }
 
-export function Sidebar({
-  isCollapsed,
-  onToggle,
-  isMobile = false,
-  onNavigate,
-}: SidebarProps) {
-  const { profile, signOut } = useAuthContext()
+export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }: SidebarProps) {
+  const { signOut } = useAuthContext()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const { profile, canCreateIssue, canPostSupervisorUpdate, canPostHRUpdate, canAccessAdminPanel } = useRole()
 
   const handleSignOut = async () => {
     await signOut()
     await navigate({ to: '/login' })
   }
 
-  const initials = getInitials(profile?.full_name ?? '')
-  const deptLabel = profile ? DEPT_LABELS[profile.department] : ''
-  const isAdmin = profile?.role === 'gm' || profile?.role === 'system_admin'
-  const visibleItems = NAV_ITEMS.filter(item => {
-    if (item.sysAdminOnly && profile?.role !== 'system_admin') return false
-    if (item.adminOnly && !isAdmin) return false
-    return true
-  })
+  const navItems: NavItem[] = [
+    { label: 'Dashboard',      icon: LayoutDashboard,   to: '/dashboard' },
+  ]
+  if (canCreateIssue())          navItems.push({ label: 'New Issue',      icon: PlusCircle,        to: '/issues/new' })
+  if (canPostSupervisorUpdate()) navItems.push({ label: 'Post Update',    icon: MessageSquarePlus, to: '/supervisor-update/new' })
+  if (canPostHRUpdate())         navItems.push({ label: 'Post HR Update', icon: Megaphone,         to: '/hr-update/new' })
+  if (canAccessAdminPanel())     navItems.push({ label: 'Admin Panel',    icon: Settings,          to: '/admin' })
+
+  const initials  = getInitials(profile?.full_name ?? '')
+  const roleBadge = ROLE_BADGE_DARK[profile?.role ?? ''] ?? 'bg-zinc-700 text-zinc-300'
 
   return (
-    <div
-      className="relative flex h-full flex-col"
-      style={{ backgroundColor: '#0a0a0a' }}
-    >
-      {/* ── Toggle button (desktop only, floats on right edge) ── */}
+    <div className="relative flex h-full flex-col" style={{ backgroundColor: '#0a0a0a' }}>
+
+      {/* ── Toggle (desktop only) ── */}
       {!isMobile && (
         <button
           onClick={onToggle}
           aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           className="absolute -right-3 top-5 z-50 flex h-6 w-6 items-center justify-center rounded-full border border-zinc-700 bg-zinc-900 text-zinc-400 transition-colors hover:text-white"
         >
-          {isCollapsed ? (
-            <ChevronRight size={12} />
-          ) : (
-            <ChevronLeft size={12} />
-          )}
+          {isCollapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
       )}
 
-      {/* ── Logo header ── */}
+      {/* ── Logo ── */}
       <div
         className={cn(
-          'flex h-20 shrink-0 items-center border-b border-zinc-800',
-          isCollapsed ? 'justify-center px-2' : 'px-6',
+          'flex h-16 shrink-0 items-center border-b border-zinc-800',
+          isCollapsed ? 'justify-center px-2' : 'gap-2.5 px-5',
         )}
       >
-        {isCollapsed ? (
-          <img src="/treal-icon.png" alt="Treal" className="h-10 w-10" />
-        ) : (
-          <img src="/treal-logo.png" alt="Treal Hotels & Suites" className="h-12 w-auto" />
+        <img src="/treal-icon.png" alt="Treal" className="h-8 w-8 shrink-0" />
+        {!isCollapsed && (
+          <span className="text-sm font-semibold tracking-widest text-white">TREAL</span>
         )}
       </div>
 
-      {/* ── Nav links ── */}
-      <nav className="flex-1 overflow-y-auto py-6">
-        {visibleItems.map(item => (
-          <NavLink
-            key={item.to}
-            item={item}
-            isCollapsed={isCollapsed}
-            onClick={onNavigate}
-          />
+      {/* ── Nav ── */}
+      <nav className="flex-1 overflow-y-auto py-4">
+        {navItems.map(item => (
+          <NavLink key={item.to} item={item} isCollapsed={isCollapsed} onClick={onNavigate} />
         ))}
       </nav>
 
       {/* ── User section ── */}
       <div className="shrink-0 border-t border-zinc-800 p-3">
-        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Sign out?</AlertDialogTitle>
-              <AlertDialogDescription>
-                You will be returned to the login screen.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleSignOut}
-                className="bg-[#a31e22] text-white hover:bg-[#82181b]"
-              >
-                Sign Out
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-
-          {isCollapsed ? (
-            /* Collapsed: stacked icon layout */
-            <div className="flex flex-col items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">
-                {initials}
-              </div>
-              <AlertDialogTrigger asChild>
-                <button
-                  aria-label="Sign out"
-                  className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-                >
-                  <LogOut size={14} />
-                </button>
-              </AlertDialogTrigger>
+        {isCollapsed ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C41E3A] text-xs font-semibold text-white">
+              {initials}
             </div>
-          ) : (
-            /* Expanded: row layout */
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-xs font-semibold text-white">
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium text-white">
-                  {profile?.full_name}
-                </p>
-                <p className="truncate text-xs text-zinc-400">{deptLabel}</p>
-              </div>
-              <AlertDialogTrigger asChild>
-                <button
-                  aria-label="Sign out"
-                  className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
-                >
-                  <LogOut size={14} />
-                </button>
-              </AlertDialogTrigger>
+            <button
+              aria-label="Sign out"
+              onClick={() => setConfirmOpen(true)}
+              className="rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#C41E3A] text-xs font-semibold text-white">
+              {initials}
             </div>
-          )}
-        </AlertDialog>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-white">{profile?.full_name}</p>
+              <Badge className={cn('mt-0.5 h-4 px-1.5 text-[10px] border-0 shadow-none', roleBadge)}>
+                {formatRole(profile?.role ?? '')}
+              </Badge>
+              <p className="truncate text-xs text-zinc-500 mt-0.5">
+                {formatDepartment(profile?.department ?? '')}
+              </p>
+            </div>
+            <button
+              aria-label="Sign out"
+              onClick={() => setConfirmOpen(true)}
+              className="shrink-0 rounded p-1 text-zinc-400 transition-colors hover:bg-zinc-800 hover:text-white"
+            >
+              <LogOut size={14} />
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* ── Sign-out confirmation ── */}
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sign out?</AlertDialogTitle>
+            <AlertDialogDescription>You will be returned to the login screen.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut} className="bg-[#C41E3A] text-white hover:bg-[#a31e22]">
+              Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

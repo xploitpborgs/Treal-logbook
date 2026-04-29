@@ -1,4 +1,5 @@
 import { useAuthContext } from '@/lib/AuthContext'
+import { useRole } from '@/hooks/useRole'
 import { StaffDashboard } from './StaffDashboard'
 import { SupervisorDashboard } from './SupervisorDashboard'
 import { GMDashboard } from './GMDashboard'
@@ -7,7 +8,8 @@ import { SystemAdminDashboard } from './SystemAdminDashboard'
 import { Loader2 } from 'lucide-react'
 
 export function DashboardPage() {
-  const { profile, loading } = useAuthContext()
+  const { loading } = useAuthContext()
+  const { profile, getDashboardType } = useRole()
 
   if (loading) {
     return (
@@ -19,18 +21,11 @@ export function DashboardPage() {
 
   if (!profile) return null
 
-  switch (profile.role) {
-    case 'staff':
-      return <StaffDashboard />
-    case 'supervisor':
-      return <SupervisorDashboard />
-    case 'gm':
-      return <GMDashboard />
-    case 'hr':
-      return <HrDashboard />
-    case 'system_admin':
-      return <SystemAdminDashboard />
-    default:
-      return <div>Unknown role</div>
+  switch (getDashboardType()) {
+    case 'staff':      return <StaffDashboard />
+    case 'supervisor': return <SupervisorDashboard />
+    case 'gm':         return <GMDashboard />
+    case 'hr':         return <HrDashboard />
+    case 'admin':      return <SystemAdminDashboard />
   }
 }

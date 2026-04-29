@@ -58,8 +58,8 @@ export function LogFeed({ entries, loading }: LogFeedProps) {
 function LogEntryCard({ entry }: { entry: LogEntry }) {
   return (
     <Link
-      to="/entries/$id"
-      params={{ id: entry.id }}
+      to="/issues/$issueId"
+      params={{ issueId: entry.id }}
       className="block rounded-lg border border-zinc-200 bg-white p-4 transition-shadow hover:shadow-sm"
       style={{ borderLeftWidth: 4, borderLeftColor: PRIORITY_BORDER[entry.priority] }}
     >

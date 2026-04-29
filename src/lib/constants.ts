@@ -9,6 +9,7 @@ export const DEPT_LABELS: Record<Department, string> = {
   management: 'Management',
   security: 'Security',
   restaurant: 'Restaurant',
+  hr: 'Human Resources',
 }
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
@@ -19,10 +20,9 @@ export const PRIORITY_LABELS: Record<Priority, string> = {
 }
 
 export const STATUS_LABELS: Record<Status, string> = {
-  open: 'Open',
+  open:        'Open',
   in_progress: 'In Progress',
-  resolved: 'Resolved',
-  escalated: 'Escalated',
+  resolved:    'Resolved',
 }
 
 export const SHIFT_LABELS: Record<Shift, string> = {

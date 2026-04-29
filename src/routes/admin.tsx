@@ -585,7 +585,7 @@ function AdminPanel() {
                     </div>
                     <div className="divide-y divide-zinc-100">
                       {entries.slice(0, 10).map(entry => (
-                        <Link key={entry.id} to="/entries/$id" params={{ id: entry.id } as any} className="block py-3 hover:bg-zinc-50 -mx-4 px-4 transition-colors">
+                        <Link key={entry.id} to="/issues/$issueId" params={{ issueId: entry.id }} className="block py-3 hover:bg-zinc-50 -mx-4 px-4 transition-colors">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-zinc-900 truncate">{entry.title}</p>

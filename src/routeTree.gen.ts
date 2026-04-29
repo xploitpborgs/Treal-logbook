@@ -15,10 +15,12 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as EntriesIndexRouteImport } from './routes/entries/index'
-import { Route as EntriesNewRouteImport } from './routes/entries/new'
-import { Route as EntriesIdRouteImport } from './routes/entries/$id'
-import { Route as EntriesIdEditRouteImport } from './routes/entries/$id.edit'
+import { Route as IssuesIndexRouteImport } from './routes/issues/index'
+import { Route as SupervisorUpdateNewRouteImport } from './routes/supervisor-update/new'
+import { Route as IssuesNewRouteImport } from './routes/issues/new'
+import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
+import { Route as HrUpdateNewRouteImport } from './routes/hr-update/new'
+import { Route as IssuesIssueIdEditRouteImport } from './routes/issues/$issueId.edit'
 
 const SecurityRoute = SecurityRouteImport.update({
   id: '/security',
@@ -50,25 +52,35 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EntriesIndexRoute = EntriesIndexRouteImport.update({
-  id: '/entries/',
-  path: '/entries/',
+const IssuesIndexRoute = IssuesIndexRouteImport.update({
+  id: '/issues/',
+  path: '/issues/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EntriesNewRoute = EntriesNewRouteImport.update({
-  id: '/entries/new',
-  path: '/entries/new',
+const SupervisorUpdateNewRoute = SupervisorUpdateNewRouteImport.update({
+  id: '/supervisor-update/new',
+  path: '/supervisor-update/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EntriesIdRoute = EntriesIdRouteImport.update({
-  id: '/entries/$id',
-  path: '/entries/$id',
+const IssuesNewRoute = IssuesNewRouteImport.update({
+  id: '/issues/new',
+  path: '/issues/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EntriesIdEditRoute = EntriesIdEditRouteImport.update({
+const IssuesIssueIdRoute = IssuesIssueIdRouteImport.update({
+  id: '/issues/$issueId',
+  path: '/issues/$issueId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HrUpdateNewRoute = HrUpdateNewRouteImport.update({
+  id: '/hr-update/new',
+  path: '/hr-update/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IssuesIssueIdEditRoute = IssuesIssueIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
-  getParentRoute: () => EntriesIdRoute,
+  getParentRoute: () => IssuesIssueIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -78,10 +90,12 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
-  '/entries/$id': typeof EntriesIdRouteWithChildren
-  '/entries/new': typeof EntriesNewRoute
-  '/entries/': typeof EntriesIndexRoute
-  '/entries/$id/edit': typeof EntriesIdEditRoute
+  '/hr-update/new': typeof HrUpdateNewRoute
+  '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
+  '/issues/new': typeof IssuesNewRoute
+  '/supervisor-update/new': typeof SupervisorUpdateNewRoute
+  '/issues/': typeof IssuesIndexRoute
+  '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -90,10 +104,12 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
-  '/entries/$id': typeof EntriesIdRouteWithChildren
-  '/entries/new': typeof EntriesNewRoute
-  '/entries': typeof EntriesIndexRoute
-  '/entries/$id/edit': typeof EntriesIdEditRoute
+  '/hr-update/new': typeof HrUpdateNewRoute
+  '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
+  '/issues/new': typeof IssuesNewRoute
+  '/supervisor-update/new': typeof SupervisorUpdateNewRoute
+  '/issues': typeof IssuesIndexRoute
+  '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -103,10 +119,12 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
-  '/entries/$id': typeof EntriesIdRouteWithChildren
-  '/entries/new': typeof EntriesNewRoute
-  '/entries/': typeof EntriesIndexRoute
-  '/entries/$id/edit': typeof EntriesIdEditRoute
+  '/hr-update/new': typeof HrUpdateNewRoute
+  '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
+  '/issues/new': typeof IssuesNewRoute
+  '/supervisor-update/new': typeof SupervisorUpdateNewRoute
+  '/issues/': typeof IssuesIndexRoute
+  '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,10 +135,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
-    | '/entries/$id'
-    | '/entries/new'
-    | '/entries/'
-    | '/entries/$id/edit'
+    | '/hr-update/new'
+    | '/issues/$issueId'
+    | '/issues/new'
+    | '/supervisor-update/new'
+    | '/issues/'
+    | '/issues/$issueId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -129,10 +149,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
-    | '/entries/$id'
-    | '/entries/new'
-    | '/entries'
-    | '/entries/$id/edit'
+    | '/hr-update/new'
+    | '/issues/$issueId'
+    | '/issues/new'
+    | '/supervisor-update/new'
+    | '/issues'
+    | '/issues/$issueId/edit'
   id:
     | '__root__'
     | '/'
@@ -141,10 +163,12 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
-    | '/entries/$id'
-    | '/entries/new'
-    | '/entries/'
-    | '/entries/$id/edit'
+    | '/hr-update/new'
+    | '/issues/$issueId'
+    | '/issues/new'
+    | '/supervisor-update/new'
+    | '/issues/'
+    | '/issues/$issueId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -154,9 +178,11 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SecurityRoute: typeof SecurityRoute
-  EntriesIdRoute: typeof EntriesIdRouteWithChildren
-  EntriesNewRoute: typeof EntriesNewRoute
-  EntriesIndexRoute: typeof EntriesIndexRoute
+  HrUpdateNewRoute: typeof HrUpdateNewRoute
+  IssuesIssueIdRoute: typeof IssuesIssueIdRouteWithChildren
+  IssuesNewRoute: typeof IssuesNewRoute
+  SupervisorUpdateNewRoute: typeof SupervisorUpdateNewRoute
+  IssuesIndexRoute: typeof IssuesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -203,47 +229,61 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/entries/': {
-      id: '/entries/'
-      path: '/entries'
-      fullPath: '/entries/'
-      preLoaderRoute: typeof EntriesIndexRouteImport
+    '/issues/': {
+      id: '/issues/'
+      path: '/issues'
+      fullPath: '/issues/'
+      preLoaderRoute: typeof IssuesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/entries/new': {
-      id: '/entries/new'
-      path: '/entries/new'
-      fullPath: '/entries/new'
-      preLoaderRoute: typeof EntriesNewRouteImport
+    '/supervisor-update/new': {
+      id: '/supervisor-update/new'
+      path: '/supervisor-update/new'
+      fullPath: '/supervisor-update/new'
+      preLoaderRoute: typeof SupervisorUpdateNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/entries/$id': {
-      id: '/entries/$id'
-      path: '/entries/$id'
-      fullPath: '/entries/$id'
-      preLoaderRoute: typeof EntriesIdRouteImport
+    '/issues/new': {
+      id: '/issues/new'
+      path: '/issues/new'
+      fullPath: '/issues/new'
+      preLoaderRoute: typeof IssuesNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/entries/$id/edit': {
-      id: '/entries/$id/edit'
+    '/issues/$issueId': {
+      id: '/issues/$issueId'
+      path: '/issues/$issueId'
+      fullPath: '/issues/$issueId'
+      preLoaderRoute: typeof IssuesIssueIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/hr-update/new': {
+      id: '/hr-update/new'
+      path: '/hr-update/new'
+      fullPath: '/hr-update/new'
+      preLoaderRoute: typeof HrUpdateNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/issues/$issueId/edit': {
+      id: '/issues/$issueId/edit'
       path: '/edit'
-      fullPath: '/entries/$id/edit'
-      preLoaderRoute: typeof EntriesIdEditRouteImport
-      parentRoute: typeof EntriesIdRoute
+      fullPath: '/issues/$issueId/edit'
+      preLoaderRoute: typeof IssuesIssueIdEditRouteImport
+      parentRoute: typeof IssuesIssueIdRoute
     }
   }
 }
 
-interface EntriesIdRouteChildren {
-  EntriesIdEditRoute: typeof EntriesIdEditRoute
+interface IssuesIssueIdRouteChildren {
+  IssuesIssueIdEditRoute: typeof IssuesIssueIdEditRoute
 }
 
-const EntriesIdRouteChildren: EntriesIdRouteChildren = {
-  EntriesIdEditRoute: EntriesIdEditRoute,
+const IssuesIssueIdRouteChildren: IssuesIssueIdRouteChildren = {
+  IssuesIssueIdEditRoute: IssuesIssueIdEditRoute,
 }
 
-const EntriesIdRouteWithChildren = EntriesIdRoute._addFileChildren(
-  EntriesIdRouteChildren,
+const IssuesIssueIdRouteWithChildren = IssuesIssueIdRoute._addFileChildren(
+  IssuesIssueIdRouteChildren,
 )
 
 const rootRouteChildren: RootRouteChildren = {
@@ -253,9 +293,11 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SecurityRoute: SecurityRoute,
-  EntriesIdRoute: EntriesIdRouteWithChildren,
-  EntriesNewRoute: EntriesNewRoute,
-  EntriesIndexRoute: EntriesIndexRoute,
+  HrUpdateNewRoute: HrUpdateNewRoute,
+  IssuesIssueIdRoute: IssuesIssueIdRouteWithChildren,
+  IssuesNewRoute: IssuesNewRoute,
+  SupervisorUpdateNewRoute: SupervisorUpdateNewRoute,
+  IssuesIndexRoute: IssuesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

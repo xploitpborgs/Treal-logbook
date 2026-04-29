@@ -25,11 +25,11 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import type { SupervisorUpdate, HrUpdate } from '@/types'
+import type { SupervisorUpdate, HRUpdate } from '@/types'
 
 type UpdateEntry =
   | (SupervisorUpdate & { type: 'supervisor' })
-  | (HrUpdate & { type: 'hr' })
+  | (HRUpdate & { type: 'hr' })
 
 interface UpdateCardProps {
   update: UpdateEntry
@@ -109,7 +109,7 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
                   className="gap-2 text-sm"
                   onClick={() => {
                     setEditBody(update.body)
-                    if (update.type === 'hr') setEditTitle((update as HrUpdate).title ?? '')
+                    if (update.type === 'hr') setEditTitle((update as HRUpdate).title ?? '')
                     setEditing(true)
                   }}
                 >
@@ -159,8 +159,8 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
           </div>
         ) : (
           <>
-            {update.type === 'hr' && (update as HrUpdate).title && (
-              <h3 className="mt-3 text-sm font-semibold text-zinc-900">{(update as HrUpdate).title}</h3>
+            {update.type === 'hr' && (update as HRUpdate).title && (
+              <h3 className="mt-3 text-sm font-semibold text-zinc-900">{(update as HRUpdate).title}</h3>
             )}
             <p className="mt-2 text-sm text-zinc-700 whitespace-pre-wrap">{update.body}</p>
           </>

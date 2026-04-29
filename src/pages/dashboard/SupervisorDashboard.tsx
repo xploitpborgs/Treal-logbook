@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { todayLabel } from '@/lib/format'
+import { detectShift } from '@/lib/formatters'
 import { useAuthContext } from '@/lib/AuthContext'
 import { FilterBar } from '@/components/dashboard/FilterBar'
 import { LogFeed } from '@/components/dashboard/LogFeed'
@@ -12,9 +13,9 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { DEFAULT_FILTERS } from '@/types/dashboard'
 import type { FilterState } from '@/types/dashboard'
-import type { LogEntry, SupervisorUpdate, HrUpdate } from '@/types'
+import type { LogEntry, SupervisorUpdate, HRUpdate } from '@/types'
 
-type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HrUpdate & { type: 'hr' })
+type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HRUpdate & { type: 'hr' })
 
 function buildIssuesQuery(filters: FilterState, department: string) {
   const now = new Date()
@@ -108,7 +109,7 @@ export function SupervisorDashboard() {
     const { error } = await supabase.from('supervisor_updates').insert({
       author_id: profile.id,
       department: profile.department,
-      shift: 'morning',
+      shift: detectShift(),
       body: updateBody.trim(),
     })
     setSubmitting(false)

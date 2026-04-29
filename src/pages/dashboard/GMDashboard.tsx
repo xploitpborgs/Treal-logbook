@@ -9,17 +9,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { DEFAULT_FILTERS } from '@/types/dashboard'
 import type { FilterState } from '@/types/dashboard'
-import type { LogEntry, SupervisorUpdate, HrUpdate } from '@/types'
+import type { LogEntry, SupervisorUpdate, HRUpdate } from '@/types'
 import { Download } from 'lucide-react'
 
-type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HrUpdate & { type: 'hr' })
+type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HRUpdate & { type: 'hr' })
 
 function buildIssuesQuery(filters: FilterState) {
   const now = new Date()
   let q = supabase
     .from('log_entries')
     .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
-    .eq('status', 'escalated')
+    .eq('is_escalated', true)
     .order('created_at', { ascending: false })
 
   if (filters.department !== 'all') q = q.eq('department', filters.department)

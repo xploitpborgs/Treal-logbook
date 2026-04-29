@@ -5,12 +5,12 @@ import { todayLabel } from '@/lib/format'
 import { useAuthContext } from '@/lib/AuthContext'
 import { UpdateCard } from '@/components/dashboard/UpdateCard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { SupervisorUpdate, HrUpdate } from '@/types'
+import type { SupervisorUpdate, HRUpdate } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 
-type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HrUpdate & { type: 'hr' })
+type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HRUpdate & { type: 'hr' })
 
 export function HrDashboard() {
   const { profile } = useAuthContext()
