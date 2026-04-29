@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
-import { todayLabel, timeAgo } from '@/lib/format'
+import { todayLabel } from '@/lib/format'
 import { useAuthContext } from '@/lib/AuthContext'
+import { UpdateCard } from '@/components/dashboard/UpdateCard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import type { SupervisorUpdate, HrUpdate } from '@/types'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { getInitials } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -125,29 +124,7 @@ export function HrDashboard() {
           ) : (
             <div className="flex flex-col gap-4">
               {updates.map(u => (
-                <div key={u.id} className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={u.author?.avatar_url || ''} />
-                      <AvatarFallback className="bg-zinc-100 text-xs font-medium text-zinc-600">
-                        {getInitials(u.author?.full_name || 'U')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-zinc-900">
-                        {u.author?.full_name || 'Unknown'} 
-                        <span className="ml-2 text-xs font-normal text-zinc-500">
-                          {u.type === 'hr' ? 'HR Update' : 'Supervisor Update'}
-                        </span>
-                      </p>
-                      <p className="text-xs text-zinc-500">{timeAgo(u.created_at)}</p>
-                    </div>
-                  </div>
-                  {u.type === 'hr' && u.title && (
-                    <h3 className="mt-3 text-sm font-semibold text-zinc-900">{u.title}</h3>
-                  )}
-                  <p className="mt-2 text-sm text-zinc-700 whitespace-pre-wrap">{u.body}</p>
-                </div>
+                <UpdateCard key={u.id} update={u} onMutated={async () => setUpdates(await fetchUpdates())} />
               ))}
             </div>
           )}

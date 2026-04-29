@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from '@tanstack/react-router'
+import { useNavigate, useRouter } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { toast } from 'sonner'
 import { AlertTriangle, ChevronLeft, Loader2, MessageSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { Link } from '@tanstack/react-router'
 import { useAuthContext } from '@/lib/AuthContext'
 import { currentShift } from '@/lib/format'
 import { DEPT_LABELS, SHIFT_LABELS, PRIORITY_LABELS } from '@/lib/constants'
@@ -83,6 +82,7 @@ const PRIORITY_STYLES: Record<Priority, { selected: string; unselected: string }
 
 export function NewEntryPage() {
   const navigate = useNavigate()
+  const router = useRouter()
   const { profile } = useAuthContext()
   const [discardOpen, setDiscardOpen] = useState(false)
   const [pendingNav, setPendingNav] = useState<string | null>(null)
@@ -161,8 +161,7 @@ export function NewEntryPage() {
     }
 
     toast.success('Entry logged successfully')
-    // @ts-expect-error - Route inference bug in IDE
-    navigate({ to: '/entries/$id', params: { id: data.id } })
+    void router.navigate({ to: '/entries/$id', params: { id: data.id } } as any)
   }
 
   return (
@@ -218,16 +217,14 @@ export function NewEntryPage() {
                             </p>
                             <div className="mt-3 flex flex-col gap-2">
                               {similarIssues.map(issue => (
-                                <Link
+                                <a
                                   key={issue.id}
-                                  to="/entries/$id"
-                                  // @ts-expect-error - Route inference bug in IDE
-                                  params={{ id: issue.id }}
+                                  href={`/entries/${issue.id}`}
                                   className="flex items-center gap-2 text-sm text-[#a31e22] hover:underline"
                                 >
                                   <MessageSquare className="h-3.5 w-3.5" />
                                   {issue.title}
-                                </Link>
+                                </a>
                               ))}
                             </div>
                           </div>
