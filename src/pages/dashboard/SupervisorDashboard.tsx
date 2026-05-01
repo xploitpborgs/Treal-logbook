@@ -8,14 +8,14 @@ import { FilterBar } from '@/components/dashboard/FilterBar'
 import { LogFeed } from '@/components/dashboard/LogFeed'
 import { StatsCards, StatsCardsSkeleton } from '@/components/dashboard/StatsCards'
 import { UpdateCard } from '@/components/dashboard/UpdateCard'
+import type { UpdateEntry } from '@/components/dashboard/UpdateCard'
+import { GMUpdateCard } from '@/components/dashboard/GMUpdateCard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { DEFAULT_FILTERS } from '@/types/dashboard'
 import type { FilterState } from '@/types/dashboard'
-import type { LogEntry, SupervisorUpdate, HRUpdate } from '@/types'
-
-type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HRUpdate & { type: 'hr' })
+import type { LogEntry, GMUpdate } from '@/types'
 
 function buildIssuesQuery(filters: FilterState, department: string) {
   const now = new Date()
@@ -46,10 +46,11 @@ function buildIssuesQuery(filters: FilterState, department: string) {
 export function SupervisorDashboard() {
   const { profile } = useAuthContext()
   const [activeTab, setActiveTab] = useState('team-issues')
-  const [entries, setEntries] = useState<LogEntry[]>([])
-  const [updates, setUpdates] = useState<CombinedUpdate[]>([])
-  const [loading, setLoading] = useState(true)
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
+  const [entries,    setEntries]    = useState<LogEntry[]>([])
+  const [updates,    setUpdates]    = useState<UpdateEntry[]>([])
+  const [gmUpdates,  setGMUpdates]  = useState<GMUpdate[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [filters,    setFilters]    = useState<FilterState>(DEFAULT_FILTERS)
   const [updateBody, setUpdateBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -63,7 +64,7 @@ export function SupervisorDashboard() {
     return (data ?? []) as LogEntry[]
   }, [profile])
 
-  const fetchUpdates = useCallback(async (): Promise<CombinedUpdate[]> => {
+  const fetchUpdates = useCallback(async (): Promise<UpdateEntry[]> => {
     const [supRes, hrRes] = await Promise.all([
       supabase.from('supervisor_updates')
         .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
@@ -79,11 +80,20 @@ export function SupervisorDashboard() {
     )
   }, [])
 
+  const fetchGMUpdates = useCallback(async (): Promise<GMUpdate[]> => {
+    const { data, error } = await supabase
+      .from('gm_updates')
+      .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
+      .order('created_at', { ascending: false }).limit(50)
+    if (error) { console.error('GM updates fetch error:', error.message); return [] }
+    return (data ?? []) as GMUpdate[]
+  }, [])
+
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    Promise.all([fetchIssues(), fetchUpdates()]).then(([issuesData, updatesData]) => {
-      if (!cancelled) { setEntries(issuesData); setUpdates(updatesData); setLoading(false) }
+    Promise.all([fetchIssues(), fetchUpdates(), fetchGMUpdates()]).then(([issuesData, updatesData, gmData]) => {
+      if (!cancelled) { setEntries(issuesData); setUpdates(updatesData); setGMUpdates(gmData); setLoading(false) }
     })
 
     const ch1 = supabase.channel('log_entries_realtime_supervisor')
@@ -99,8 +109,22 @@ export function SupervisorDashboard() {
         if (!cancelled) setUpdates(await fetchUpdates())
       }).subscribe()
 
-    return () => { cancelled = true; supabase.removeChannel(ch1); supabase.removeChannel(ch2) }
-  }, [filters, fetchIssues, fetchUpdates, activeTab])
+    const ch3 = supabase.channel('gm_updates_realtime_supervisor')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) {
+          setGMUpdates(await fetchGMUpdates())
+          toast.info('New GM update posted')
+        }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) setGMUpdates(await fetchGMUpdates())
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) setGMUpdates(await fetchGMUpdates())
+      }).subscribe()
+
+    return () => { cancelled = true; supabase.removeChannel(ch1); supabase.removeChannel(ch2); supabase.removeChannel(ch3) }
+  }, [filters, fetchIssues, fetchUpdates, fetchGMUpdates, activeTab])
 
   async function handlePostUpdate(e: React.FormEvent) {
     e.preventDefault()
@@ -145,12 +169,23 @@ export function SupervisorDashboard() {
         <TabsContent value="supervisor-feed" className="mt-4">
           {loading ? (
             <div className="text-sm text-zinc-500">Loading updates...</div>
-          ) : updates.length === 0 ? (
+          ) : updates.length === 0 && gmUpdates.length === 0 ? (
             <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-200">
               <p className="text-sm font-medium text-zinc-500">No updates yet</p>
             </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* GM Directives section */}
+              {gmUpdates.length > 0 && (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-wide text-amber-600 py-1">GM Directives</p>
+                  {gmUpdates.map(g => (
+                    <GMUpdateCard key={g.id} update={g} />
+                  ))}
+                  {updates.length > 0 && <div className="border-t border-zinc-100 my-1" />}
+                </>
+              )}
+              {/* Supervisor + HR updates */}
               {updates.map(u => (
                 <UpdateCard key={u.id} update={u} onMutated={async () => setUpdates(await fetchUpdates())} />
               ))}

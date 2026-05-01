@@ -25,11 +25,41 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import type { SupervisorUpdate, HRUpdate } from '@/types'
+import type { SupervisorUpdate, HRUpdate, GMUpdate } from '@/types'
 
-type UpdateEntry =
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export type UpdateEntry =
   | (SupervisorUpdate & { type: 'supervisor' })
-  | (HRUpdate & { type: 'hr' })
+  | (HRUpdate        & { type: 'hr' })
+  | (GMUpdate        & { type: 'gm' })
+
+// ─── Per-type visual config ─────────────────────────────────────────────────
+
+const TYPE_CONFIG = {
+  supervisor: {
+    label:       'Supervisor Update',
+    borderColor: 'border-l-blue-400',
+  },
+  hr: {
+    label:       'HR Update',
+    borderColor: 'border-l-purple-400',
+  },
+  gm: {
+    label:       'GM Update',
+    borderColor: 'border-l-amber-400',
+  },
+}
+
+// ─── Table lookup ───────────────────────────────────────────────────────────
+
+function getTable(type: UpdateEntry['type']) {
+  if (type === 'hr')         return 'hr_updates'
+  if (type === 'gm')         return 'gm_updates'
+  return                            'supervisor_updates'
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
 
 interface UpdateCardProps {
   update: UpdateEntry
@@ -40,17 +70,19 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
   const { profile } = useAuthContext()
   const [editing, setEditing] = useState(false)
   const [editBody, setEditBody] = useState(update.body)
-  const [editTitle, setEditTitle] = useState('title' in update ? update.title : '')
+  const [editTitle, setEditTitle] = useState('title' in update ? (update as any).title ?? '' : '')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const isOwner = profile?.id === update.author_id
-  const table = update.type === 'hr' ? 'hr_updates' : 'supervisor_updates'
+  const isOwner    = profile?.id === update.author_id
+  const table      = getTable(update.type)
+  const typeConfig = TYPE_CONFIG[update.type]
+  const hasTitle   = update.type === 'hr' || update.type === 'gm'
 
   async function handleSave() {
     setSaving(true)
     const payload: Record<string, string> = { body: editBody.trim() }
-    if (update.type === 'hr') payload.title = editTitle.trim()
+    if (hasTitle) payload.title = editTitle.trim()
 
     const { error } = await supabase.from(table).update(payload).eq('id', update.id)
     setSaving(false)
@@ -77,7 +109,7 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
 
   return (
     <>
-      <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className={`rounded-lg border border-zinc-200 bg-white p-4 shadow-sm border-l-4 ${typeConfig.borderColor}`}>
         {/* Header row */}
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8 shrink-0">
@@ -90,7 +122,7 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
             <p className="text-sm font-medium text-zinc-900">
               {update.author?.full_name || 'Unknown'}
               <span className="ml-2 text-xs font-normal text-zinc-500">
-                {update.type === 'hr' ? 'HR Update' : 'Supervisor Update'}
+                {typeConfig.label}
               </span>
             </p>
             <p className="text-xs text-zinc-500">{timeAgo(update.created_at)}</p>
@@ -109,7 +141,7 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
                   className="gap-2 text-sm"
                   onClick={() => {
                     setEditBody(update.body)
-                    if (update.type === 'hr') setEditTitle((update as HRUpdate).title ?? '')
+                    if (hasTitle) setEditTitle((update as any).title ?? '')
                     setEditing(true)
                   }}
                 >
@@ -130,7 +162,7 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
         {/* Body */}
         {editing ? (
           <div className="mt-3 flex flex-col gap-3">
-            {update.type === 'hr' && (
+            {hasTitle && (
               <input
                 className="w-full rounded-md border border-zinc-300 px-3 py-1.5 text-sm focus:border-[#a31e22] focus:outline-none"
                 placeholder="Title"
@@ -159,8 +191,8 @@ export function UpdateCard({ update, onMutated }: UpdateCardProps) {
           </div>
         ) : (
           <>
-            {update.type === 'hr' && (update as HRUpdate).title && (
-              <h3 className="mt-3 text-sm font-semibold text-zinc-900">{(update as HRUpdate).title}</h3>
+            {hasTitle && (update as any).title && (
+              <h3 className="mt-3 text-sm font-semibold text-zinc-900">{(update as any).title}</h3>
             )}
             <p className="mt-2 text-sm text-zinc-700 whitespace-pre-wrap">{update.body}</p>
           </>

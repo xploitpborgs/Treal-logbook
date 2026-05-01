@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { supabase } from '@/lib/supabase'
+import { logAudit } from '@/lib/auditLogger'
 import { useRole } from '@/hooks/useRole'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -18,18 +19,16 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
-import { ChevronLeft, Info, Loader2 } from 'lucide-react'
-import { departmentLabels, supervisorCategoryLabels } from '@/lib/formatters'
-import { logAudit } from '@/lib/auditLogger'
+import { ChevronLeft, Loader2, Megaphone, TriangleAlert } from 'lucide-react'
+import { gmCategoryLabels } from '@/lib/formatters'
 import { cn } from '@/lib/utils'
 
-export const Route = createFileRoute('/supervisor-update/new')({
-  component: SupervisorUpdateNew,
+export const Route = createFileRoute('/gm-update/new')({
+  component: GMUpdateNew,
 })
 
 const schema = z.object({
   title:    z.string().min(5, 'Title must be at least 5 characters').max(150),
-  team:     z.string().min(1, 'Please select a team'),
   category: z.string().min(1, 'Please select a category'),
   priority: z.string().min(1, 'Please select a priority'),
   body:     z.string().min(20, 'Details must be at least 20 characters'),
@@ -45,77 +44,80 @@ const PRIORITY_BUTTONS = [
 ]
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  operational:     'Day-to-day operational matters',
-  staffing:        'Staff attendance, performance or scheduling',
-  guest_relations: 'Guest feedback or service matters',
-  safety:          'Safety concerns or incidents',
-  handover:        'End of shift notes for next supervisor',
-  general:         'General updates',
+  directive:    'A direct instruction to supervisors',
+  policy:       'A policy change or update',
+  announcement: 'A general management announcement',
+  performance:  'Performance standards or feedback',
+  general:      'General management communication',
 }
 
-function SupervisorUpdateNew() {
-  const navigate = useNavigate()
-  const { profile, isSupervisor, isAdmin } = useRole()
-
+function GMUpdateNew() {
+  const navigate    = useNavigate()
+  const { profile, isGM, isAdmin } = useRole()
   const [discardOpen, setDiscardOpen] = useState(false)
 
-  // Access control
-  useEffect(() => {
-    if (profile && !isSupervisor() && !isAdmin()) {
-      toast.error('Only supervisors can post supervisor updates.')
-      navigate({ to: '/dashboard' })
-    }
-  }, [profile])
-
-  const canChangeTeam = isAdmin()
-
   const {
-    register, handleSubmit, watch, setValue, reset,
+    register,
+    handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isDirty, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { title: '', team: '', category: '', priority: 'low', body: '' },
+    defaultValues: {
+      title:    '',
+      category: '',
+      priority: 'low',
+      body:     '',
+    },
   })
 
-  useEffect(() => {
-    if (profile) {
-      reset({
-        title:    '',
-        team:     (profile.team ?? profile.department) as string,
-        category: '',
-        priority: 'low',
-        body:     '',
-      })
-    }
-  }, [profile?.id])
-
-  const title    = watch('title')
   const priority = watch('priority')
+  const title    = watch('title')
+  const body     = watch('body')
 
-  const tryLeave = () => {
+  // Access guard
+  if (!isGM() && !isAdmin()) {
+    toast.error('Only the General Manager can post GM updates.')
+    navigate({ to: '/dashboard' })
+    return null
+  }
+
+  function tryLeave() {
     if (isDirty) setDiscardOpen(true)
     else navigate({ to: '/dashboard' })
   }
 
-  const onSubmit = async (data: FormData) => {
-    const { error } = await supabase
-      .from('supervisor_updates')
-      .insert({
-        author_id: profile!.id,
-        team:      data.team,
-        title:     data.title,
-        body:      data.body,
-        priority:  data.priority,
-        category:  data.category,
-      })
+  async function onSubmit(values: FormData) {
+    if (!profile) return
 
-    if (error) {
-      toast.error('Failed to post update. Please try again.')
-    } else {
-      logAudit({ actorId: profile!.id, action: 'created', entityType: 'supervisor_update', entityId: profile!.id, note: 'Supervisor update posted' })
-      toast.success('Supervisor update posted')
-      navigate({ to: '/dashboard' })
+    const { data, error } = await supabase
+      .from('gm_updates')
+      .insert({
+        author_id: profile.id,
+        title:     values.title.trim(),
+        body:      values.body.trim(),
+        priority:  values.priority,
+        category:  values.category,
+      })
+      .select()
+      .single()
+
+    if (error || !data) {
+      toast.error('Failed to post GM update. Please try again.')
+      return
     }
+
+    await logAudit({
+      actorId:    profile.id,
+      action:     'created',
+      entityType: 'gm_update',
+      entityId:   data.id,
+      note:       'GM update posted',
+    })
+
+    toast.success('GM update posted successfully')
+    navigate({ to: '/dashboard' })
   }
 
   return (
@@ -133,16 +135,16 @@ function SupervisorUpdateNew() {
             Back
           </button>
           <div>
-            <h1 className="text-xl font-semibold text-zinc-900">Post Supervisor Update</h1>
-            <p className="text-sm text-zinc-500">Share operational updates with all supervisors and management</p>
+            <h1 className="text-xl font-semibold text-zinc-900">Post GM Update</h1>
+            <p className="text-sm text-zinc-500">Issue directives and announcements to supervisors and management</p>
           </div>
         </div>
 
         {/* Visibility notice */}
-        <Alert className="border-blue-200 bg-blue-50">
-          <Info className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            ℹ️ This update will be visible to all supervisors, the General Manager and HR.
+        <Alert className="border-amber-200 bg-amber-50">
+          <Megaphone className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-700 text-sm">
+            This update will be visible to all Supervisors, HR and System Admin. Staff will <strong>NOT</strong> see this update.
           </AlertDescription>
         </Alert>
 
@@ -161,33 +163,11 @@ function SupervisorUpdateNew() {
                 </div>
                 <Input
                   {...register('title')}
-                  placeholder="Brief summary of the update"
+                  placeholder="e.g. Updated Check-in Procedures — Effective Immediately"
                   maxLength={150}
                   className={cn(errors.title && 'border-red-400 focus-visible:ring-red-400')}
                 />
                 {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
-              </div>
-
-              {/* Team */}
-              <div className="space-y-1.5">
-                <Label className="text-sm font-medium text-zinc-700">
-                  Team <span className="text-[#C41E3A]">*</span>
-                </Label>
-                <Select
-                  value={watch('team')}
-                  onValueChange={v => setValue('team', v, { shouldDirty: true, shouldValidate: true })}
-                  disabled={!canChangeTeam}
-                >
-                  <SelectTrigger className={cn(errors.team && 'border-red-400')}>
-                    <SelectValue placeholder="Select team" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(departmentLabels).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.team && <p className="text-xs text-red-600">{errors.team.message}</p>}
               </div>
 
               {/* Category */}
@@ -203,7 +183,7 @@ function SupervisorUpdateNew() {
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(supervisorCategoryLabels).map(([v, l]) => (
+                    {Object.entries(gmCategoryLabels).map(([v, l]) => (
                       <SelectItem key={v} value={v}>
                         <div className="flex flex-col">
                           <span className="font-medium">{l}</span>
@@ -216,7 +196,7 @@ function SupervisorUpdateNew() {
                 {errors.category && <p className="text-xs text-red-600">{errors.category.message}</p>}
               </div>
 
-              {/* Priority toggle */}
+              {/* Priority */}
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium text-zinc-700">
                   Priority <span className="text-[#C41E3A]">*</span>
@@ -238,6 +218,14 @@ function SupervisorUpdateNew() {
                     </button>
                   ))}
                 </div>
+                {priority === 'urgent' && (
+                  <Alert className="border-amber-200 bg-amber-50 mt-2">
+                    <TriangleAlert className="h-4 w-4 text-amber-600" />
+                    <AlertDescription className="text-amber-700 text-xs">
+                      Urgent GM updates will immediately notify all supervisors and HR via email.
+                    </AlertDescription>
+                  </Alert>
+                )}
               </div>
 
               {/* Details */}
@@ -246,11 +234,11 @@ function SupervisorUpdateNew() {
                   <Label className="text-sm font-medium text-zinc-700">
                     Details <span className="text-[#C41E3A]">*</span>
                   </Label>
-                  <span className="text-xs text-zinc-400">{watch('body').length} chars</span>
+                  <span className="text-xs text-zinc-400">{body.length} chars</span>
                 </div>
                 <Textarea
                   {...register('body')}
-                  placeholder="Provide full details of the update..."
+                  placeholder="Provide full details of the directive or announcement. Be clear and specific about any actions required."
                   className={cn('min-h-[160px]', errors.body && 'border-red-400 focus-visible:ring-red-400')}
                   rows={6}
                 />
@@ -259,7 +247,13 @@ function SupervisorUpdateNew() {
 
               {/* Actions */}
               <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-zinc-100">
-                <Button type="button" variant="ghost" className="text-zinc-600" onClick={tryLeave}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-zinc-600"
+                  disabled={isSubmitting}
+                  onClick={tryLeave}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -271,7 +265,7 @@ function SupervisorUpdateNew() {
                     <span className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" /> Posting…
                     </span>
-                  ) : 'Post Update'}
+                  ) : 'Post GM Update'}
                 </Button>
               </div>
             </form>
@@ -279,11 +273,14 @@ function SupervisorUpdateNew() {
         </Card>
       </div>
 
+      {/* Unsaved changes dialog */}
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Discard update?</AlertDialogTitle>
-            <AlertDialogDescription>You have unsaved changes. Are you sure you want to leave?</AlertDialogDescription>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to leave?
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Keep Editing</AlertDialogCancel>

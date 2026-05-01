@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { useRouterState } from '@tanstack/react-router'
 import { cn } from '@/lib/utils'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -17,6 +17,7 @@ const ROUTE_TITLES: Record<string, string> = {
   '/dashboard':               'Dashboard',
   '/issues/new':              'New Issue',
   '/supervisor-update/new':   'Post Supervisor Update',
+  '/gm-update/new':           'Post GM Update',
   '/hr-update/new':           'Post HR Update',
   '/admin':                   'Admin Panel',
   '/profile':                 'Profile Settings',
@@ -45,6 +46,10 @@ export function AppLayout({ children, title }: AppLayoutProps) {
   const { location } = useRouterState()
 
   const pageTitle = resolveTitle(location.pathname, title)
+
+  useEffect(() => {
+    document.title = `${pageTitle} | Treal Logbook`
+  }, [pageTitle])
 
   return (
     <ProtectedRoute>

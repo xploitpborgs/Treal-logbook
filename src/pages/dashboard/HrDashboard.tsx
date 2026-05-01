@@ -4,46 +4,49 @@ import { supabase } from '@/lib/supabase'
 import { todayLabel } from '@/lib/format'
 import { useAuthContext } from '@/lib/AuthContext'
 import { UpdateCard } from '@/components/dashboard/UpdateCard'
+import type { UpdateEntry } from '@/components/dashboard/UpdateCard'
+import { GMUpdateCard } from '@/components/dashboard/GMUpdateCard'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { SupervisorUpdate, HRUpdate } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-
-type CombinedUpdate = (SupervisorUpdate & { type: 'supervisor' }) | (HRUpdate & { type: 'hr' })
+import type { GMUpdate } from '@/types'
 
 export function HrDashboard() {
   const { profile } = useAuthContext()
   const [activeTab, setActiveTab] = useState('feed')
-  const [updates, setUpdates] = useState<CombinedUpdate[]>([])
-  const [loading, setLoading] = useState(true)
+  const [updates,   setUpdates]   = useState<UpdateEntry[]>([])
+  const [gmUpdates, setGMUpdates] = useState<GMUpdate[]>([])
+  const [loading,   setLoading]   = useState(true)
 
   // Form State
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
-  const fetchUpdates = useCallback(async (): Promise<CombinedUpdate[]> => {
-    const supRes = await supabase
-      .from('supervisor_updates')
-      .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
-      .order('created_at', { ascending: false })
-      .limit(50)
-      
-    const hrRes = await supabase
-      .from('hr_updates')
-      .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
-      .order('created_at', { ascending: false })
-      .limit(50)
-
+  const fetchUpdates = useCallback(async (): Promise<UpdateEntry[]> => {
+    const [supRes, hrRes] = await Promise.all([
+      supabase.from('supervisor_updates')
+        .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
+        .order('created_at', { ascending: false }).limit(50),
+      supabase.from('hr_updates')
+        .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
+        .order('created_at', { ascending: false }).limit(50),
+    ])
     const supData = (supRes.data ?? []).map((u: any) => ({ ...u, type: 'supervisor' as const }))
-    const hrData = (hrRes.data ?? []).map((u: any) => ({ ...u, type: 'hr' as const }))
+    const hrData  = (hrRes.data  ?? []).map((u: any) => ({ ...u, type: 'hr' as const }))
+    return [...supData, ...hrData].sort((a, b) =>
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    )
+  }, [])
 
-    const combined = [...supData, ...hrData].sort((a, b) => {
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    })
-
-    return combined
+  const fetchGMUpdates = useCallback(async (): Promise<GMUpdate[]> => {
+    const { data, error } = await supabase
+      .from('gm_updates')
+      .select('*, author:profiles!author_id(id, full_name, avatar_url, department, role)')
+      .order('created_at', { ascending: false }).limit(50)
+    if (error) { console.error('GM updates fetch error:', error.message); return [] }
+    return (data ?? []) as GMUpdate[]
   }, [])
 
   useEffect(() => {
@@ -51,10 +54,10 @@ export function HrDashboard() {
     setLoading(true)
 
     fetchUpdates().then(data => {
-      if (!cancelled) {
-        setUpdates(data)
-        setLoading(false)
-      }
+      if (!cancelled) { setUpdates(data); setLoading(false) }
+    })
+    fetchGMUpdates().then(data => {
+      if (!cancelled) setGMUpdates(data)
     })
 
     const channel = supabase
@@ -68,11 +71,23 @@ export function HrDashboard() {
         if (activeTab === 'feed') setUpdates(await fetchUpdates())
       }).subscribe()
 
+    const chGM = supabase.channel('gm_updates_realtime_hr')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) { setGMUpdates(await fetchGMUpdates()); toast.info('New GM update posted') }
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) setGMUpdates(await fetchGMUpdates())
+      })
+      .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'gm_updates' }, async () => {
+        if (!cancelled) setGMUpdates(await fetchGMUpdates())
+      }).subscribe()
+
     return () => {
       cancelled = true
       supabase.removeChannel(channel)
+      supabase.removeChannel(chGM)
     }
-  }, [fetchUpdates, activeTab])
+  }, [fetchUpdates, fetchGMUpdates, activeTab])
 
   async function handlePostUpdate(e: React.FormEvent) {
     e.preventDefault()
@@ -117,12 +132,22 @@ export function HrDashboard() {
         <TabsContent value="feed" className="mt-4">
           {loading ? (
              <div className="text-sm text-zinc-500">Loading updates...</div>
-          ) : updates.length === 0 ? (
+          ) : updates.length === 0 && gmUpdates.length === 0 ? (
              <div className="flex h-64 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-zinc-200">
                <p className="text-sm font-medium text-zinc-500">No updates yet</p>
              </div>
           ) : (
             <div className="flex flex-col gap-4">
+              {/* GM Directives section */}
+              {gmUpdates.length > 0 && (
+                <>
+                  <p className="text-xs font-medium uppercase tracking-wide text-amber-600 py-1">GM Directives</p>
+                  {gmUpdates.map(g => (
+                    <GMUpdateCard key={g.id} update={g} />
+                  ))}
+                  {updates.length > 0 && <div className="border-t border-zinc-100 my-1" />}
+                </>
+              )}
               {updates.map(u => (
                 <UpdateCard key={u.id} update={u} onMutated={async () => setUpdates(await fetchUpdates())} />
               ))}

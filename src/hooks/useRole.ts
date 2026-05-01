@@ -15,6 +15,8 @@ export function useRole() {
   const canEscalate             = () => isSupervisor() || isAdmin()
   const canPostSupervisorUpdate = () => isSupervisor() || isAdmin()
   const canPostHRUpdate         = () => isHR() || isAdmin()
+  const canPostGMUpdate         = () => isGM() || isAdmin()
+  const canViewGMUpdates        = () => isSupervisor() || isHR() || isAdmin()
   const canViewSupervisorFeed   = () => isSupervisor() || isGM() || isHR() || isAdmin()
   const canViewHRUpdates        = () => isSupervisor() || isGM() || isHR() || isAdmin()
   const canViewEscalatedIssues  = () => isGM() || isAdmin()
@@ -47,6 +49,8 @@ export function useRole() {
     canEscalate,
     canPostSupervisorUpdate,
     canPostHRUpdate,
+    canPostGMUpdate,
+    canViewGMUpdates,
     canViewSupervisorFeed,
     canViewHRUpdates,
     canViewEscalatedIssues,

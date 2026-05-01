@@ -39,6 +39,14 @@ export const hrCategoryLabels: Record<string, string> = {
   general:       'General',
 }
 
+export const gmCategoryLabels: Record<string, string> = {
+  directive:    'Directive',
+  policy:       'Policy',
+  announcement: 'Announcement',
+  performance:  'Performance',
+  general:      'General',
+}
+
 export const priorityLabels: Record<string, string> = {
   low:    'Low',
   medium: 'Medium',
@@ -82,6 +90,10 @@ export function formatStatus(status: string): string {
 
 export function formatRole(role: string): string {
   return roleLabels[role] ?? role
+}
+
+export function formatGMCategory(cat: string): string {
+  return gmCategoryLabels[cat] ?? cat
 }
 
 export function getInitials(name: string): string {

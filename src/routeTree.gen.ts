@@ -20,6 +20,7 @@ import { Route as SupervisorUpdateNewRouteImport } from './routes/supervisor-upd
 import { Route as IssuesNewRouteImport } from './routes/issues/new'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
 import { Route as HrUpdateNewRouteImport } from './routes/hr-update/new'
+import { Route as GmUpdateNewRouteImport } from './routes/gm-update/new'
 import { Route as IssuesIssueIdEditRouteImport } from './routes/issues/$issueId.edit'
 
 const SecurityRoute = SecurityRouteImport.update({
@@ -77,6 +78,11 @@ const HrUpdateNewRoute = HrUpdateNewRouteImport.update({
   path: '/hr-update/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GmUpdateNewRoute = GmUpdateNewRouteImport.update({
+  id: '/gm-update/new',
+  path: '/gm-update/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IssuesIssueIdEditRoute = IssuesIssueIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -90,6 +96,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
@@ -135,6 +144,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
+    | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
@@ -149,6 +159,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
+    | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
@@ -163,6 +174,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/security'
+    | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
@@ -178,6 +190,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
   SecurityRoute: typeof SecurityRoute
+  GmUpdateNewRoute: typeof GmUpdateNewRoute
   HrUpdateNewRoute: typeof HrUpdateNewRoute
   IssuesIssueIdRoute: typeof IssuesIssueIdRouteWithChildren
   IssuesNewRoute: typeof IssuesNewRoute
@@ -264,6 +277,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HrUpdateNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gm-update/new': {
+      id: '/gm-update/new'
+      path: '/gm-update/new'
+      fullPath: '/gm-update/new'
+      preLoaderRoute: typeof GmUpdateNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/issues/$issueId/edit': {
       id: '/issues/$issueId/edit'
       path: '/edit'
@@ -293,6 +313,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
   SecurityRoute: SecurityRoute,
+  GmUpdateNewRoute: GmUpdateNewRoute,
   HrUpdateNewRoute: HrUpdateNewRoute,
   IssuesIssueIdRoute: IssuesIssueIdRouteWithChildren,
   IssuesNewRoute: IssuesNewRoute,

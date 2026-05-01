@@ -1,3 +1,4 @@
+import { useState, useCallback, useEffect } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -7,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { cn } from '@/lib/utils'
+import { cn, debounce } from '@/lib/utils'
 import { DEPT_LABELS, PRIORITY_LABELS, STATUS_LABELS, SHIFT_LABELS } from '@/lib/constants'
 import type { FilterState } from '@/types/dashboard'
 import type { Department, Priority, Status, Shift } from '@/types'
@@ -26,6 +27,17 @@ const DATE_GROUPS: { value: FilterState['dateGroup']; label: string }[] = [
 ]
 
 export function FilterBar({ filters, onChange, hideDepartment }: FilterBarProps) {
+  const [searchInput, setSearchInput] = useState(filters.search)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const debouncedSearch = useCallback(
+    debounce((value: string) => onChange({ search: value }), 300),
+    [onChange],
+  )
+
+  // Sync if parent resets filters externally
+  useEffect(() => { setSearchInput(filters.search) }, [filters.search])
+
   return (
     <div className="flex flex-col gap-3">
       {/* Search */}
@@ -33,9 +45,13 @@ export function FilterBar({ filters, onChange, hideDepartment }: FilterBarProps)
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
         <Input
           placeholder="Search entries…"
-          value={filters.search}
-          onChange={e => onChange({ search: e.target.value })}
+          value={searchInput}
+          onChange={e => {
+            setSearchInput(e.target.value)
+            debouncedSearch(e.target.value)
+          }}
           className="pl-9"
+          style={{ fontSize: '16px' }}
         />
       </div>
 

@@ -104,7 +104,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }:
   const { signOut } = useAuthContext()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const { profile, canCreateIssue, canPostSupervisorUpdate, canPostHRUpdate, canAccessAdminPanel } = useRole()
+  const { profile, canCreateIssue, canPostSupervisorUpdate, canPostHRUpdate, canPostGMUpdate, canAccessAdminPanel } = useRole()
 
   const handleSignOut = async () => {
     await signOut()
@@ -114,10 +114,11 @@ export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }:
   const navItems: NavItem[] = [
     { label: 'Dashboard',      icon: LayoutDashboard,   to: '/dashboard' },
   ]
-  if (canCreateIssue())          navItems.push({ label: 'New Issue',      icon: PlusCircle,        to: '/issues/new' })
-  if (canPostSupervisorUpdate()) navItems.push({ label: 'Post Update',    icon: MessageSquarePlus, to: '/supervisor-update/new' })
-  if (canPostHRUpdate())         navItems.push({ label: 'Post HR Update', icon: Megaphone,         to: '/hr-update/new' })
-  if (canAccessAdminPanel())     navItems.push({ label: 'Admin Panel',    icon: Settings,          to: '/admin' })
+  if (canCreateIssue())          navItems.push({ label: 'New Issue',       icon: PlusCircle,        to: '/issues/new' })
+  if (canPostSupervisorUpdate()) navItems.push({ label: 'Post Update',     icon: MessageSquarePlus, to: '/supervisor-update/new' })
+  if (canPostGMUpdate())         navItems.push({ label: 'Post GM Update',  icon: Megaphone,         to: '/gm-update/new' })
+  if (canPostHRUpdate())         navItems.push({ label: 'Post HR Update',  icon: Megaphone,         to: '/hr-update/new' })
+  if (canAccessAdminPanel())     navItems.push({ label: 'Admin Panel',     icon: Settings,          to: '/admin' })
 
   const initials  = getInitials(profile?.full_name ?? '')
   const roleBadge = ROLE_BADGE_DARK[profile?.role ?? ''] ?? 'bg-zinc-700 text-zinc-300'

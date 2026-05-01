@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useRole } from '@/hooks/useRole'
+import { logAudit } from '@/lib/auditLogger'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -43,6 +44,7 @@ export function EscalateDialog({ entryId, onEscalated }: EscalateDialogProps) {
     if (error) {
       toast.error(`Failed to escalate: ${error.message}`)
     } else {
+      logAudit({ actorId: profile!.id, action: 'escalated', entityType: 'log_entry', entityId: entryId, note: note.trim() || 'Escalated to GM' })
       toast.success('Issue escalated to GM')
       setOpen(false)
       setNote('')

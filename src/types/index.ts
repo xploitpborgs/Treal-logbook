@@ -38,6 +38,13 @@ export type HRCategory =
   | 'disciplinary'
   | 'general'
 
+export type GMCategory =
+  | 'directive'
+  | 'policy'
+  | 'announcement'
+  | 'performance'
+  | 'general'
+
 export type Priority = 'low' | 'medium' | 'high' | 'urgent'
 
 export type Status = 'open' | 'in_progress' | 'resolved'
@@ -53,11 +60,13 @@ export type AuditAction =
   | 'role_changed'
   | 'deactivated'
   | 'reactivated'
+  | 'exported'
 
 export type EntityType =
   | 'log_entry'
   | 'supervisor_update'
   | 'hr_update'
+  | 'gm_update'
   | 'profile'
   | 'comment'
 
@@ -128,6 +137,18 @@ export interface HRUpdate {
   priority: Priority
   category: HRCategory
   is_pinned: boolean
+  author?: Profile
+}
+
+export interface GMUpdate {
+  id: string
+  created_at: string
+  updated_at: string
+  author_id: string
+  title: string
+  body: string
+  priority: Priority
+  category: GMCategory
   author?: Profile
 }
 

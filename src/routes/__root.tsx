@@ -14,7 +14,7 @@ export const Route = createRootRoute({
     <>
       <Outlet />
       <PWAUpdatePrompt />
-      <Toaster richColors position="bottom-right" />
+      <Toaster richColors position="bottom-right" duration={4000} closeButton />
       <RouterDevtools />
     </>
   ),
