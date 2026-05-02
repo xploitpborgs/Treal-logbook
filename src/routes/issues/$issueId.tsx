@@ -73,7 +73,7 @@ function IssueView() {
   const { issueId } = Route.useParams()
   const navigate = useNavigate()
   const router = useRouter()
-  const { profile, isHR, isGM, isStaff, canUpdateIssueStatus, canEscalate, isAdmin } = useRole()
+  const { profile, isHR, isGM, isStaff, isSupervisor, canUpdateIssueStatus, canEscalate, isAdmin } = useRole()
 
   const [issue, setIssue]                       = useState<IssueFull | null>(null)
   const [comments, setComments]                 = useState<CommentWithAuthor[]>([])

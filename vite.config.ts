@@ -74,4 +74,7 @@ export default defineConfig({
       'X-XSS-Protection': '1; mode=block',
     },
   },
+  build: {
+    chunkSizeWarningLimit: 2000,
+  },
 })

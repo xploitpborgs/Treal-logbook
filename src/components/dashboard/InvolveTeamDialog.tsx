@@ -128,7 +128,7 @@ export function InvolveTeamDialog({ entryId, currentInvolved = [], onUpdated }: 
                       className={`flex items-center justify-between p-2.5 rounded-lg border cursor-pointer transition-colors ${selected.includes(val) ? 'bg-zinc-50 border-zinc-900' : 'bg-white border-zinc-200 hover:bg-zinc-50'}`}
                     >
                       <span className="text-sm">{label} Supervisor</span>
-                      <Checkbox checked={selected.includes(val)} readOnly />
+                      <Checkbox checked={selected.includes(val)} />
                     </div>
                   )
                 })}

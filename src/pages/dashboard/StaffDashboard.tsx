@@ -322,7 +322,7 @@ export function StaffDashboard() {
 
     const channel = supabase
       .channel('log_entries_realtime_staff')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'log_entries' }, async (payload) => {
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'log_entries' }, async () => {
         if (cancelled) return
         setEntries(await fetchEntries())
         // Even for own posts, show the indicator if we are on a different tab
