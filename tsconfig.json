@@ -4,6 +4,7 @@
       "@/*": ["./src/*"]
     }
   },
+  "exclude": ["supabase"],
   "files": [],
   "references": [
     { "path": "./tsconfig.app.json" },

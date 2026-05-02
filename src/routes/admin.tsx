@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useMemo, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
@@ -23,7 +24,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { toast } from 'sonner'
 import {
   BookOpen, Building2, CircleCheck, ClipboardList, Clock, Eye, Info,
-  MessageSquare, MoreHorizontal, Search, ShieldCheck, Trophy,
+  MessageSquare, MoreHorizontal, Search, ShieldCheck, Trash2, Trophy,
   UserPlus, Users, UserX,
 } from 'lucide-react'
 import {
@@ -169,10 +170,51 @@ function AdminPanel() {
     setLoadingAudit(false)
   }
 
+  const [departments, setDepartments] = useState<{ id: string, name: string, label: string }[]>([])
+  const [loadingDepts, setLoadingDepts] = useState(false)
+  const [newDept, setNewDept] = useState({ name: '', label: '' })
+  const [isAddingDept, setIsAddingDept] = useState(false)
+
+  const fetchDepartmentsFromDB = async () => {
+    setLoadingDepts(true)
+    const { data } = await supabase.from('departments').select('*').order('label')
+    if (data) setDepartments(data)
+    setLoadingDepts(false)
+  }
+
+  const handleAddDepartment = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newDept.name || !newDept.label) return
+    setIsAddingDept(true)
+    const { error } = await supabase.from('departments').insert([
+      { name: newDept.name.toLowerCase().replace(/\s+/g, '_'), label: newDept.label }
+    ])
+    if (error) {
+      toast.error('Failed to add department: ' + error.message)
+    } else {
+      toast.success('Department added')
+      setNewDept({ name: '', label: '' })
+      fetchDepartmentsFromDB()
+    }
+    setIsAddingDept(false)
+  }
+
+  const handleDeleteDepartment = async (id: string) => {
+    const { error } = await supabase.from('departments').delete().eq('id', id)
+    if (error) {
+      toast.error('Failed to delete department: ' + error.message)
+    } else {
+      toast.success('Department deleted')
+      fetchDepartmentsFromDB()
+    }
+  }
+
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchStaff()
     fetchOps()
     fetchAudit()
+    fetchDepartmentsFromDB()
   }, [])
 
   // ─── Staff computed ────────────────────────────────────────────────────
@@ -196,6 +238,7 @@ function AdminPanel() {
   const staffTotalPages = Math.ceil(filteredStaff.length / PAGE_SIZE)
   const pagedStaff      = filteredStaff.slice(staffPage * PAGE_SIZE, (staffPage + 1) * PAGE_SIZE)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setStaffPage(0) }, [search, deptFilter, roleFilter, statusFilter])
 
   // ─── Operations computed ───────────────────────────────────────────────
@@ -285,6 +328,7 @@ function AdminPanel() {
   const auditTotalPages = Math.ceil(filteredAudit.length / AUDIT_PAGE_SIZE)
   const pagedAudit      = filteredAudit.slice(auditPage * AUDIT_PAGE_SIZE, (auditPage + 1) * AUDIT_PAGE_SIZE)
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setAuditPage(0) }, [auditSearch, auditAction, auditEntity, auditDate])
 
   // ─── Staff actions ─────────────────────────────────────────────────────
@@ -393,6 +437,7 @@ function AdminPanel() {
             <TabsTrigger value="staff">Staff Management</TabsTrigger>
             <TabsTrigger value="operations">Operations</TabsTrigger>
             <TabsTrigger value="audit">Audit Log</TabsTrigger>
+            <TabsTrigger value="departments">Departments</TabsTrigger>
           </TabsList>
 
           {/* ══ TAB 1: STAFF MANAGEMENT ══ */}
@@ -438,9 +483,15 @@ function AdminPanel() {
                     <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="Department" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Departments</SelectItem>
-                      {Object.entries(departmentLabels).map(([v, l]) => (
-                        <SelectItem key={v} value={v}>{l}</SelectItem>
-                      ))}
+                      {departments.length > 0 ? (
+                        departments.map(d => (
+                          <SelectItem key={d.name} value={d.name}>{d.label}</SelectItem>
+                        ))
+                      ) : (
+                        Object.entries(departmentLabels).map(([v, l]) => (
+                          <SelectItem key={v} value={v}>{l}</SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <Select value={roleFilter} onValueChange={setRoleFilter}>
@@ -901,6 +952,94 @@ function AdminPanel() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* ══ TAB 4: DEPARTMENTS ══ */}
+          <TabsContent value="departments" className="mt-6 space-y-4">
+
+            {/* Add form */}
+            <Card className="border-zinc-200 shadow-none">
+              <CardContent className="p-5">
+                <p className="text-sm font-medium text-zinc-700 mb-4">Add Department</p>
+                <form onSubmit={handleAddDepartment} className="flex flex-col sm:flex-row gap-3">
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs text-zinc-500">Name (Label)</Label>
+                    <Input
+                      placeholder="e.g. Front Office"
+                      value={newDept.label}
+                      onChange={e => setNewDept(s => ({ ...s, label: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <Label className="text-xs text-zinc-500">Identifier (Slug)</Label>
+                    <Input
+                      placeholder="e.g. front_office"
+                      value={newDept.name}
+                      onChange={e => setNewDept(s => ({ ...s, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="flex items-end">
+                    <Button
+                      type="submit"
+                      disabled={isAddingDept}
+                      className="bg-[#C41E3A] hover:bg-[#a01830] text-white w-full sm:w-auto"
+                    >
+                      {isAddingDept ? 'Adding…' : 'Add Department'}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+
+            {/* Department list */}
+            <Card className="border-zinc-200 shadow-none">
+              <CardContent className="p-0">
+                {loadingDepts ? (
+                  <div className="p-4 space-y-2">
+                    {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
+                  </div>
+                ) : departments.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-16 gap-2">
+                    <Building2 className="h-8 w-8 text-zinc-300" />
+                    <p className="text-sm font-medium text-zinc-500">No departments added yet</p>
+                    <p className="text-xs text-zinc-400">Use the form above to add your first department.</p>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-zinc-100">
+                    {departments.map(dept => (
+                      <div key={dept.id} className="flex items-center gap-3 px-5 py-3.5">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-zinc-100">
+                          <Building2 className="h-4 w-4 text-zinc-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-zinc-900">{dept.label}</p>
+                          <p className="text-xs font-mono text-zinc-400">{dept.name}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-zinc-400 hover:text-red-600 hover:bg-red-50"
+                          onClick={() => {
+                            if (confirm(`Delete '${dept.label}'?`)) handleDeleteDepartment(dept.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Alert className="border-amber-200 bg-amber-50">
+              <Info className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="text-amber-800 text-xs">
+                Deleting a department that still has staff assigned may cause display issues. Reassign staff before deleting.
+              </AlertDescription>
+            </Alert>
+          </TabsContent>
         </Tabs>
       </div>
 
@@ -940,9 +1079,15 @@ function AdminPanel() {
                 >
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(departmentLabels).map(([v, l]) => (
-                      <SelectItem key={v} value={v}>{l}</SelectItem>
-                    ))}
+                    {departments.length > 0 ? (
+                      departments.map(d => (
+                        <SelectItem key={d.name} value={d.name}>{d.label}</SelectItem>
+                      ))
+                    ) : (
+                      Object.entries(departmentLabels).map(([v, l]) => (
+                        <SelectItem key={v} value={v}>{l}</SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

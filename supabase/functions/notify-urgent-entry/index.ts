@@ -1,5 +1,9 @@
+// @ts-ignore: Deno URL import
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+// @ts-ignore: Deno URL import
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
+
+declare const Deno: any;
 
 const RESEND_API_KEY          = Deno.env.get("RESEND_API_KEY")!
 const SUPABASE_URL            = Deno.env.get("SUPABASE_URL")!
@@ -124,7 +128,7 @@ function buildHtml(entry: Record<string, string>, authorName: string, authorDept
 </html>`
 }
 
-serve(async (req) => {
+serve(async (req: Request) => {
   try {
     const payload = await req.json()
     const entry = payload.record as Record<string, string>
@@ -159,11 +163,11 @@ serve(async (req) => {
     }
 
     const recipientsWithEmail = recipients
-      .map((r: Record<string, string>) => {
-        const user = users.find((u) => u.id === r.id)
+      .map((r: any) => {
+        const user = users.find((u: any) => u.id === r.id)
         return { ...r, email: user?.email }
       })
-      .filter((r): r is typeof r & { email: string } => Boolean(r.email))
+      .filter((r: any): r is { email: string } & any => Boolean(r.email))
 
     if (recipientsWithEmail.length === 0) {
       return new Response(JSON.stringify({ message: "No recipient emails resolved" }), { status: 200 })
@@ -182,7 +186,7 @@ serve(async (req) => {
 
     // Send emails in parallel via Resend
     const results = await Promise.allSettled(
-      recipientsWithEmail.map((recipient) =>
+      recipientsWithEmail.map((recipient: any) =>
         fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: {
@@ -203,9 +207,9 @@ serve(async (req) => {
       )
     )
 
-    const failed = results.filter((r) => r.status === "rejected")
+    const failed = results.filter((r: any) => r.status === "rejected")
     if (failed.length > 0) {
-      console.error("Some emails failed:", failed.map((f) => (f as PromiseRejectedResult).reason))
+      console.error("Some emails failed:", failed.map((f: any) => (f as PromiseRejectedResult).reason))
     }
 
     const sent = results.length - failed.length

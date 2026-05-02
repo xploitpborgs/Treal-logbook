@@ -1,9 +1,12 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { createFileRoute, useNavigate, Link } from '@tanstack/react-router'
+import { createFileRoute, useNavigate, useRouter, Link } from '@tanstack/react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { supabase } from '@/lib/supabase'
 import { useRole } from '@/hooks/useRole'
 import { EscalateDialog } from '@/components/dashboard/EscalateDialog'
+import { InvolveTeamDialog } from '@/components/dashboard/InvolveTeamDialog'
+import { AssignIssueDialog } from '@/components/dashboard/AssignIssueDialog'
 import type { LogEntry, LogComment, Profile, Status } from '@/types'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -22,7 +25,7 @@ import {
 import { logAudit } from '@/lib/auditLogger'
 import {
   AlertCircle, ArrowLeft, ArrowUpCircle, Building2, Calendar,
-  CircleCheck, Clock, MessageSquare, Pencil, Tag, TriangleAlert,
+  ChevronRight, CircleCheck, Clock, MessageSquare, Pencil, Tag, TriangleAlert,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/issues/$issueId')({
@@ -35,6 +38,7 @@ type IssueFull = Omit<LogEntry, 'author' | 'escalator' | 'resolver'> & {
   author?:    ProfileSlim | null
   escalator?: ProfileSlim | null
   resolver?:  ProfileSlim | null
+  assignee?:  ProfileSlim | null
 }
 
 type CommentWithAuthor = LogComment & { author?: ProfileSlim | null }
@@ -68,6 +72,7 @@ const STATUS_BUTTONS = [
 function IssueView() {
   const { issueId } = Route.useParams()
   const navigate = useNavigate()
+  const router = useRouter()
   const { profile, isHR, isGM, isStaff, canUpdateIssueStatus, canEscalate, isAdmin } = useRole()
 
   const [issue, setIssue]                       = useState<IssueFull | null>(null)
@@ -88,7 +93,8 @@ function IssueView() {
         *,
         author:profiles!author_id(id, full_name, department, team, role, avatar_url),
         escalator:profiles!escalated_by(id, full_name, department, team, role),
-        resolver:profiles!resolved_by(id, full_name, department, team, role)
+        resolver:profiles!resolved_by(id, full_name, department, team, role),
+        assignee:profiles!assigned_to(id, full_name, department, team, role, avatar_url)
       `)
       .eq('id', issueId)
       .single()
@@ -113,11 +119,15 @@ function IssueView() {
   // Initial load
   useEffect(() => {
     let cancelled = false
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
     Promise.all([fetchIssue(), fetchComments()]).then(([issueData]) => {
       if (cancelled) return
       if (issueData) setIssue(issueData)
       setLoading(false)
+      
+      // Mark as seen
+      localStorage.setItem(`last_seen_comments_log_${issueId}`, Date.now().toString())
     })
     return () => { cancelled = true }
   }, [issueId])
@@ -126,13 +136,23 @@ function IssueView() {
   useEffect(() => {
     if (!profile || !issue || loading) return
 
+    // NEW: Access for involved parties
+    const involved = issue.involved_parties || []
+    const isActuallyInvolved = 
+      involved.includes('All Management') && (isSupervisor() || isGM() || isAdmin() || isHR()) ||
+      involved.includes(profile.role === 'system_admin' ? 'System Admin' : '') ||
+      involved.includes(profile.role === 'hr' ? 'HR' : '') ||
+      involved.includes(`supervisor:${profile.department}`)
+
+    if (isActuallyInvolved) return // Access granted
+
     if (isHR()) {
       toast.error('HR does not have access to issue details.')
       navigate({ to: '/dashboard' })
       return
     }
-    if (isGM() && !issue.is_escalated) {
-      toast.error('You can only view escalated issues.')
+    if (isGM() && !issue.is_escalated && issue.author?.role !== 'supervisor') {
+      toast.error('You can only view escalated or supervisor issues.')
       navigate({ to: '/dashboard' })
       return
     }
@@ -259,38 +279,57 @@ function IssueView() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-3xl space-y-6 pb-12">
+      <div className="mx-auto max-w-3xl space-y-6 pb-12 animate-in fade-in slide-in-from-bottom-3 duration-300">
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-1.5 text-sm text-zinc-400">
+          <button
+            onClick={() => router.history.back()}
+            className="flex items-center gap-1 hover:text-zinc-700 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            <span>{isStaff() ? 'My Issues' : 'Dashboard'}</span>
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-zinc-300" />
+          <span className="truncate text-zinc-500 max-w-[200px] sm:max-w-sm">{titleDisplay}</span>
+        </div>
 
         {/* Page header */}
         <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3 min-w-0">
-            <Link
-              to="/dashboard"
-              className="mt-0.5 shrink-0 flex items-center gap-1 text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back
-            </Link>
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold text-zinc-900 leading-snug truncate">{titleDisplay}</h1>
-              <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                <PriorityBadge priority={issue.priority} />
-                <StatusBadge status={issue.status} />
-                {issue.is_escalated && (
-                  <Badge className="bg-[#C41E3A]/10 text-[#C41E3A] border-transparent shadow-none">
-                    Escalated
-                  </Badge>
-                )}
-              </div>
+          <div className="min-w-0">
+            <h1 className="text-lg font-semibold text-zinc-900 leading-snug">{issue.title}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+              <PriorityBadge priority={issue.priority} />
+              <StatusBadge status={issue.status} />
+              {issue.is_escalated && (
+                <Badge className="bg-[#C41E3A]/10 text-[#C41E3A] border-transparent shadow-none">
+                  Escalated
+                </Badge>
+              )}
+              {issue.assignee && (
+                <Badge className="bg-indigo-100 text-indigo-700 border-transparent shadow-none">
+                  Assigned to: {issue.assignee.full_name}
+                </Badge>
+              )}
             </div>
           </div>
-          {canEdit && (
-            <Link to="/issues/$issueId/edit" params={{ issueId }}>
-              <Button variant="ghost" size="icon" className="shrink-0 text-zinc-400 hover:text-zinc-700">
-                <Pencil className="h-4 w-4" />
-              </Button>
-            </Link>
-          )}
+          <div className="flex items-center gap-2">
+            {(isSupervisor() || isGM() || isAdmin()) && issue.status !== 'resolved' && (
+              <AssignIssueDialog
+                entryId={issue.id}
+                department={issue.department}
+                currentAssigneeId={issue.assignee?.id}
+                onAssigned={() => fetchIssue().then(d => { if (d) setIssue(d) })}
+              />
+            )}
+            {canEdit && (
+              <Link to="/issues/$issueId/edit" params={{ issueId }}>
+                <Button variant="ghost" size="icon" className="shrink-0 text-zinc-400 hover:text-zinc-700">
+                  <Pencil className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Issue detail card */}
@@ -299,21 +338,21 @@ function IssueView() {
 
             {/* Meta grid */}
             <div className="grid grid-cols-2 gap-3 md:grid-cols-4 mb-5">
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 min-w-0">
                 <Building2 className="h-4 w-4 shrink-0 text-zinc-400" />
-                <span>{formatDepartment(issue.team ?? issue.department)}</span>
+                <span className="truncate">{formatDepartment(issue.team ?? issue.department)}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 min-w-0">
                 <Clock className="h-4 w-4 shrink-0 text-zinc-400" />
-                <span>{formatShift(issue.shift)} Shift</span>
+                <span className="truncate">{formatShift(issue.shift)} Shift</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 min-w-0">
                 <Tag className="h-4 w-4 shrink-0 text-zinc-400" />
-                <span>{formatCategory(issue.category)}</span>
+                <span className="truncate">{formatCategory(issue.category)}</span>
               </div>
-              <div className="flex items-center gap-2 text-sm text-zinc-500">
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-zinc-500 min-w-0">
                 <Calendar className="h-4 w-4 shrink-0 text-zinc-400" />
-                <span>{formatDateTime(issue.created_at)}</span>
+                <span className="truncate">{formatDateTime(issue.created_at)}</span>
               </div>
             </div>
 
@@ -351,7 +390,7 @@ function IssueView() {
             <div className="border-t border-zinc-100 mb-5" />
 
             {/* Body */}
-            <p className="whitespace-pre-wrap text-sm text-zinc-700 leading-relaxed">{issue.body}</p>
+            <p className="whitespace-pre-wrap break-words text-sm text-zinc-700 leading-relaxed">{issue.body}</p>
 
             {/* Resolved banner */}
             {issue.status === 'resolved' && (
@@ -390,18 +429,35 @@ function IssueView() {
           </Card>
         )}
 
-        {/* Escalation panel */}
-        {showEscalatePanel && issue.status !== 'resolved' && (
+        {/* Escalation & Involvement panel */}
+        {(showEscalatePanel || (isGM() || isAdmin()) && issue.is_escalated) && issue.status !== 'resolved' && (
           <Card className="border-zinc-200 shadow-none">
             <CardContent className="p-4 flex items-center justify-between gap-4">
               <div>
-                <p className="text-sm font-medium text-zinc-700">Escalate Issue</p>
-                <p className="text-xs text-zinc-400">Send this issue to the GM for review</p>
+                <p className="text-sm font-medium text-zinc-700">
+                  {showEscalatePanel ? 'Escalate Issue' : 'Management Collaboration'}
+                </p>
+                <p className="text-xs text-zinc-400">
+                  {showEscalatePanel 
+                    ? 'Send this issue to the GM for review' 
+                    : 'Add other supervisors or departments to this conversation'}
+                </p>
               </div>
-              <EscalateDialog
-                entryId={issueId}
-                onEscalated={() => fetchIssue().then(d => { if (d) setIssue(d) })}
-              />
+              <div className="flex gap-2">
+                {showEscalatePanel && (
+                  <EscalateDialog
+                    entryId={issueId}
+                    onEscalated={() => fetchIssue().then(d => { if (d) setIssue(d) })}
+                  />
+                )}
+                {(isGM() || isAdmin()) && issue.is_escalated && (
+                  <InvolveTeamDialog
+                    entryId={issueId}
+                    currentInvolved={issue.involved_parties}
+                    onUpdated={() => fetchIssue().then(d => { if (d) setIssue(d) })}
+                  />
+                )}
+              </div>
             </CardContent>
           </Card>
         )}
@@ -457,7 +513,7 @@ function IssueView() {
                         {comment.author?.department && (
                           <p className="text-xs text-zinc-400">{formatDepartment(comment.author.department)}</p>
                         )}
-                        <p className="text-sm text-zinc-700 whitespace-pre-wrap">{comment.comment}</p>
+                        <p className="text-sm text-zinc-700 whitespace-pre-wrap break-words">{comment.comment}</p>
                       </div>
                     </div>
                     {idx < comments.length - 1 && <div className="border-t border-zinc-100" />}

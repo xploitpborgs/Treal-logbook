@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import {
@@ -29,13 +29,15 @@ const DATE_GROUPS: { value: FilterState['dateGroup']; label: string }[] = [
 export function FilterBar({ filters, onChange, hideDepartment }: FilterBarProps) {
   const [searchInput, setSearchInput] = useState(filters.search)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const debouncedSearch = useCallback(
-    debounce((value: string) => onChange({ search: value }), 300),
-    [onChange],
-  )
+  const onChangeRef = useRef(onChange)
+  useEffect(() => { onChangeRef.current = onChange }, [onChange])
+  const debouncedSearch = useRef(
+    // eslint-disable-next-line react-hooks/refs
+    debounce((value: string) => onChangeRef.current({ search: value }), 300)
+  ).current
 
   // Sync if parent resets filters externally
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setSearchInput(filters.search) }, [filters.search])
 
   return (
@@ -50,8 +52,7 @@ export function FilterBar({ filters, onChange, hideDepartment }: FilterBarProps)
             setSearchInput(e.target.value)
             debouncedSearch(e.target.value)
           }}
-          className="pl-9"
-          style={{ fontSize: '16px' }}
+          className="pl-9 text-base"
         />
       </div>
 

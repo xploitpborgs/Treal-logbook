@@ -2,10 +2,13 @@ import { Link } from '@tanstack/react-router'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
-import { getInitials } from '@/lib/utils'
+import { cn, getInitials } from '@/lib/utils'
+import { useAuthContext } from '@/lib/AuthContext'
+import { useState, useEffect } from 'react'
+import { supabase } from '@/lib/supabase'
 import { timeAgo } from '@/lib/format'
 import { DEPT_LABELS, PRIORITY_LABELS, STATUS_LABELS } from '@/lib/constants'
+import { MessageSquare } from 'lucide-react'
 import type { LogEntry } from '@/types'
 
 interface LogFeedProps {
@@ -21,17 +24,83 @@ const PRIORITY_COLORS: Record<string, string> = {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-blue-50 text-blue-700',
+  open:        'bg-blue-50 text-blue-700',
   in_progress: 'bg-amber-50 text-amber-700',
-  resolved: 'bg-green-50 text-green-700',
-  escalated: 'bg-[#a31e22] text-white',
+  resolved:    'bg-green-50 text-green-700',
+  escalated:   'bg-[#C41E3A] text-white',
 }
 
 const PRIORITY_BORDER: Record<string, string> = {
-  low: '#a1a1aa',
-  medium: '#3b82f6',
-  high: '#f97316',
-  urgent: '#a31e22',
+  low:    'border-l-zinc-300',
+  medium: 'border-l-blue-500',
+  high:   'border-l-orange-500',
+  urgent: 'border-l-[#C41E3A]',
+}
+
+function CommentCountBadge({ entryId }: { entryId: string }) {
+  const { profile } = useAuthContext()
+  const [count, setCount] = useState<number | null>(null)
+  const [hasNew, setHasNew] = useState(false)
+  
+  useEffect(() => {
+    const fetchStats = async () => {
+      const { data, count: exactCount } = await supabase
+        .from('log_comments')
+        .select('created_at, author_id', { count: 'exact' })
+        .eq('entry_id', entryId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+      
+      setCount(exactCount)
+      
+      if (data && data.length > 0) {
+        const newest = data[0]
+        if (newest.author_id !== profile?.id) {
+          const latest = new Date(newest.created_at).getTime()
+          const lastSeen = localStorage.getItem(`last_seen_comments_log_${entryId}`)
+          if (!lastSeen || latest > parseInt(lastSeen)) {
+            setHasNew(true)
+          }
+        }
+      }
+    }
+    fetchStats()
+
+    // Listen for new comments
+    const channel = supabase
+      .channel(`log-comments-count-${entryId}`)
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'log_comments',
+        filter: `entry_id=eq.${entryId}`
+      }, (payload) => { 
+        fetchStats()
+        const newComment = payload.new as any
+        if (newComment.author_id !== profile?.id) {
+          setHasNew(true)
+        }
+      })
+      .subscribe()
+    
+    return () => { supabase.removeChannel(channel) }
+  }, [entryId])
+
+  if (!count || count === 0) return null
+
+  return (
+    <div className="relative">
+      <div className={cn(
+        "flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-bold border transition-all",
+        hasNew 
+          ? "bg-red-50 text-red-600 border-red-100 animate-pulse" 
+          : "bg-zinc-100 text-zinc-500 border-zinc-200"
+      )}>
+        <MessageSquare className="h-3 w-3" />
+        {count}
+      </div>
+    </div>
+  )
 }
 
 export function LogFeed({ entries, loading }: LogFeedProps) {
@@ -60,31 +129,29 @@ function LogEntryCard({ entry }: { entry: LogEntry }) {
     <Link
       to="/issues/$issueId"
       params={{ issueId: entry.id } as any}
-      className="block rounded-lg border border-zinc-200 bg-white p-4 transition-shadow hover:shadow-sm"
-      style={{ borderLeftWidth: 4, borderLeftColor: PRIORITY_BORDER[entry.priority] }}
+      className={cn(
+        'block rounded-lg border border-zinc-200 bg-white p-4 border-l-4 transition-shadow hover:shadow-sm',
+        PRIORITY_BORDER[entry.priority],
+      )}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                PRIORITY_COLORS[entry.priority],
-              )}
-            >
+            <Badge className={cn('rounded-full border-0 shadow-none', PRIORITY_COLORS[entry.priority])}>
               {PRIORITY_LABELS[entry.priority]}
-            </span>
-            <span
-              className={cn(
-                'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                STATUS_COLORS[entry.status],
-              )}
-            >
+            </Badge>
+            <Badge className={cn('rounded-full border-0 shadow-none', STATUS_COLORS[entry.status])}>
               {STATUS_LABELS[entry.status]}
-            </span>
-            <Badge variant="outline" className="h-5 rounded-full px-2 text-xs font-normal text-zinc-500">
+            </Badge>
+            <Badge variant="outline" className="rounded-full text-xs font-normal text-zinc-500">
               {DEPT_LABELS[entry.department]}
             </Badge>
+            {entry.assignee && (
+              <Badge className="rounded-full border-0 shadow-none bg-indigo-50 text-indigo-700">
+                Assigned: {getInitials(entry.assignee.full_name)}
+              </Badge>
+            )}
+            <CommentCountBadge entryId={entry.id} />
           </div>
 
           <h3 className="mt-2 text-sm font-semibold text-zinc-900 leading-snug">{entry.title}</h3>
@@ -119,8 +186,7 @@ function LogFeedSkeleton() {
       {Array.from({ length: 5 }).map((_, i) => (
         <div
           key={i}
-          className="rounded-lg border border-zinc-200 bg-white p-4"
-          style={{ borderLeftWidth: 4, borderLeftColor: '#e4e4e7' }}
+          className="rounded-lg border border-zinc-200 border-l-4 border-l-zinc-200 bg-white p-4"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 space-y-2">

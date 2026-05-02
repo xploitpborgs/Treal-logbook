@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -145,6 +146,7 @@ function SecurityMonitorPage() {
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
     const interval = setInterval(refresh, 10000)
     return () => clearInterval(interval)

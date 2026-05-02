@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createFileRoute, Navigate } from '@tanstack/react-router'
 import { useAuthContext } from '@/lib/AuthContext'
 import { FullScreenSpinner } from '@/components/auth/Spinner'

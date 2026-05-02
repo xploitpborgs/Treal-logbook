@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { useRole } from '@/hooks/useRole'
 import { logAudit } from '@/lib/auditLogger'
+import { notifyManagement } from '@/lib/notifications'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import {
@@ -45,6 +46,15 @@ export function EscalateDialog({ entryId, onEscalated }: EscalateDialogProps) {
       toast.error(`Failed to escalate: ${error.message}`)
     } else {
       logAudit({ actorId: profile!.id, action: 'escalated', entityType: 'log_entry', entityId: entryId, note: note.trim() || 'Escalated to GM' })
+      
+      notifyManagement({
+        title: 'New Escalation',
+        message: `A new issue has been escalated by ${profile.full_name}: ${note.trim() || 'No note provided'}`,
+        type: 'escalation',
+        link: `/dashboard`, // Or a specific entry page if available
+        priority: 'high'
+      })
+
       toast.success('Issue escalated to GM')
       setOpen(false)
       setNote('')

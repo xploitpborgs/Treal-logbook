@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { createFileRoute } from '@tanstack/react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'

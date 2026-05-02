@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { LogOut, Menu, Settings, User } from 'lucide-react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { useAuthContext } from '@/lib/AuthContext'
@@ -6,6 +6,7 @@ import { useRole } from '@/hooks/useRole'
 import { cn } from '@/lib/utils'
 import { formatRole, getInitials } from '@/lib/formatters'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { NotificationCenter } from './NotificationCenter'
 
 // ─── Role badge colors (light header bg) ───────────────────────────────────
 
@@ -35,19 +37,32 @@ const ROLE_BADGE_LIGHT: Record<string, string> = {
 }
 
 interface HeaderProps {
-  title: string
   onMenuClick: () => void
 }
 
-export function Header({ title, onMenuClick }: HeaderProps) {
+export function Header({ onMenuClick }: HeaderProps) {
   const { profile, signOut } = useAuthContext()
   const { isAdmin } = useRole()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [time, setTime] = useState(new Date())
+
+  // Keep the time updated every minute
+  useEffect(() => {
+    const timer = setInterval(() => setTime(new Date()), 60000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const formattedTime = time.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  })
 
   const initials   = getInitials(profile?.full_name ?? '')
   const roleBadge  = ROLE_BADGE_LIGHT[profile?.role ?? ''] ?? 'bg-zinc-100 text-zinc-600'
   const roleLabel  = formatRole(profile?.role ?? '')
+  const firstName  = profile?.full_name?.split(' ')[0] ?? 'there'
 
   const handleSignOut = async () => {
     await signOut()
@@ -55,18 +70,23 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center border-b border-zinc-200 bg-white px-4 sm:px-8 lg:px-10">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center border-b border-zinc-200 bg-white px-4 sm:px-8 lg:px-10">
 
-      {/* Left — hamburger (mobile) + page title */}
+      {/* Left — hamburger (mobile) + greeting */}
       <div className="flex items-center gap-3">
-        <button
+        <Button
+          variant="ghost"
+          size="icon"
           onClick={onMenuClick}
           aria-label="Open navigation"
-          className="rounded-md p-1.5 text-zinc-500 transition-colors hover:bg-zinc-100 md:hidden"
+          className="h-8 w-8 text-zinc-500 hover:bg-zinc-100 md:hidden"
         >
           <Menu size={20} />
-        </button>
-        <h1 className="text-base font-semibold text-zinc-900 sm:text-lg">{title}</h1>
+        </Button>
+        <div className="flex flex-col leading-none">
+          <span className="text-base font-semibold text-zinc-900 tracking-tight">Welcome, {firstName}</span>
+          <span className="text-xs font-medium uppercase tracking-wider text-zinc-400 mt-1">{formattedTime}</span>
+        </div>
       </div>
 
       {/* Right — role badge + avatar dropdown */}
@@ -81,12 +101,15 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           {roleLabel}
         </Badge>
 
+        {/* Persistent Notification Center */}
+        <NotificationCenter />
+
         {/* Avatar dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
               aria-label="User menu"
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-[#C41E3A] text-xs font-semibold text-white transition-opacity hover:opacity-80"
+              className="flex h-9 w-9 items-center justify-center rounded-full bg-[#C41E3A] text-xs font-semibold text-white transition-opacity hover:opacity-80"
             >
               {initials}
             </button>
@@ -137,7 +160,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSignOut} className="bg-[#C41E3A] text-white hover:bg-[#a31e22]">
+            <AlertDialogAction onClick={handleSignOut} className="bg-[#C41E3A] text-white hover:bg-[#a01830]">
               Sign Out
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -69,6 +69,8 @@ export type EntityType =
   | 'gm_update'
   | 'profile'
   | 'comment'
+  | 'staff_update'
+  | 'update_comment'
 
 export interface Profile {
   id: string
@@ -95,14 +97,19 @@ export interface LogEntry {
   body: string
   status: Status
   is_escalated?: boolean
+  involved_parties?: string[]
   escalated_by?: string
   escalated_at?: string
   escalation_note?: string
   resolved_by?: string
   resolved_at?: string
+  assigned_to?: string
+  assigned_by?: string
+  assigned_at?: string
   author?: Profile
   escalator?: Profile
   resolver?: Profile
+  assignee?: Profile
 }
 
 export interface LogComment {
@@ -163,4 +170,32 @@ export interface AuditLog {
   new_data?: Record<string, unknown>
   note?: string
   actor?: Profile
+}
+
+export type NotificationType = 'escalation' | 'directive' | 'mention' | 'general'
+
+export interface AppNotification {
+  id: string
+  created_at: string
+  user_id: string
+  title: string
+  message: string
+  type: NotificationType
+  link?: string
+  is_read: boolean
+  priority?: Priority
+}
+
+export interface HandoverReport {
+  id: string
+  created_at: string
+  date: string
+  shift: Shift
+  department: Department
+  supervisor_id: string
+  remarks?: string
+  is_signed_off: boolean
+  signed_at?: string
+  entry_ids: string[]
+  supervisor?: Profile
 }

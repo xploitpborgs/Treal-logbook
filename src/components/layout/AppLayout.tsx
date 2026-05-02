@@ -95,8 +95,8 @@ export function AppLayout({ children, title }: AppLayoutProps) {
             isCollapsed ? 'md:ml-16' : 'md:ml-60',
           )}
         >
-          <Header title={pageTitle} onMenuClick={() => setMobileOpen(true)} />
-          <main className="flex-1 min-w-0 overflow-y-auto bg-white p-4 sm:p-8 lg:p-10">
+          <Header onMenuClick={() => setMobileOpen(true)} />
+          <main className="flex-1 min-w-0 overflow-y-auto bg-white p-4 sm:p-8 lg:p-10 [scrollbar-gutter:stable]">
             {children}
           </main>
         </div>

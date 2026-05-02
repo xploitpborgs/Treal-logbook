@@ -9,6 +9,8 @@ import {
   MessageSquarePlus,
   PlusCircle,
   Settings,
+  BarChart3,
+  ClipboardCheck,
 } from 'lucide-react'
 import { Link, useRouterState } from '@tanstack/react-router'
 import { useNavigate } from '@tanstack/react-router'
@@ -79,7 +81,7 @@ function NavLink({
       <div
         className={cn(
           'flex w-full items-center',
-          isCollapsed ? 'justify-center py-3' : 'gap-3 px-4 py-2.5',
+          isCollapsed ? 'justify-center py-3' : 'gap-3 px-4 py-3',
         )}
       >
         <item.icon size={18} className="shrink-0" />
@@ -104,7 +106,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }:
   const { signOut } = useAuthContext()
   const navigate = useNavigate()
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const { profile, canCreateIssue, canPostSupervisorUpdate, canPostHRUpdate, canPostGMUpdate, canAccessAdminPanel } = useRole()
+  const { profile, isSupervisor, canCreateIssue, canPostSupervisorUpdate, canPostHRUpdate, canPostGMUpdate, canAccessAdminPanel, isAdmin } = useRole()
 
   const handleSignOut = async () => {
     await signOut()
@@ -115,10 +117,20 @@ export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }:
     { label: 'Dashboard',      icon: LayoutDashboard,   to: '/dashboard' },
   ]
   if (canCreateIssue())          navItems.push({ label: 'New Issue',       icon: PlusCircle,        to: '/issues/new' })
-  if (canPostSupervisorUpdate()) navItems.push({ label: 'Post Update',     icon: MessageSquarePlus, to: '/supervisor-update/new' })
-  if (canPostGMUpdate())         navItems.push({ label: 'Post GM Update',  icon: Megaphone,         to: '/gm-update/new' })
-  if (canPostHRUpdate())         navItems.push({ label: 'Post HR Update',  icon: Megaphone,         to: '/hr-update/new' })
+  if (canPostSupervisorUpdate() && !isAdmin()) navItems.push({ label: 'Post Update', icon: MessageSquarePlus, to: '/supervisor-update/new' })
+  if (isAdmin()) {
+    navItems.push({ label: 'Post Announcement', icon: Megaphone, to: '/announcements/new' })
+  } else {
+    if (canPostGMUpdate()) navItems.push({ label: 'Post GM Update', icon: Megaphone, to: '/announcements/new' })
+    if (canPostHRUpdate()) navItems.push({ label: 'Post HR Update', icon: Megaphone, to: '/announcements/new' })
+  }
   if (canAccessAdminPanel())     navItems.push({ label: 'Admin Panel',     icon: Settings,          to: '/admin' })
+  if (profile?.role === 'gm' || isAdmin()) {
+    navItems.push({ label: 'Performance', icon: BarChart3, to: '/performance' })
+  }
+  if (isSupervisor() || isAdmin()) {
+    navItems.push({ label: 'Shift Report', icon: ClipboardCheck, to: '/reports/handover' })
+  }
 
   const initials  = getInitials(profile?.full_name ?? '')
   const roleBadge = ROLE_BADGE_DARK[profile?.role ?? ''] ?? 'bg-zinc-700 text-zinc-300'
@@ -206,7 +218,7 @@ export function Sidebar({ isCollapsed, onToggle, isMobile = false, onNavigate }:
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSignOut} className="bg-[#C41E3A] text-white hover:bg-[#a31e22]">
+            <AlertDialogAction onClick={handleSignOut} className="bg-[#C41E3A] text-white hover:bg-[#a01830]">
               Sign Out
             </AlertDialogAction>
           </AlertDialogFooter>

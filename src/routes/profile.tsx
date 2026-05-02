@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
 import { DEPT_LABELS } from '@/lib/constants'
 import { getInitials } from '@/lib/utils'
+import { formatRole } from '@/lib/formatters'
 
 export const Route = createFileRoute('/profile')({
   component: ProfilePage,
@@ -23,6 +25,7 @@ function ProfilePage() {
 
   useEffect(() => {
     if (profile) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFullName(profile.full_name)
     }
   }, [profile])
@@ -66,7 +69,8 @@ function ProfilePage() {
   return (
     <AppLayout title="Profile Settings">
       <div className="mx-auto max-w-2xl space-y-6 pb-12">
-        <div className="hidden sm:flex items-center justify-between">
+        <div className="mb-6">
+          <h1 className="text-xl font-semibold text-zinc-900 mb-1">Profile Settings</h1>
           <p className="text-sm text-zinc-500">Manage your personal information and password</p>
         </div>
 
@@ -121,8 +125,8 @@ function ProfilePage() {
                   </div>
                   <div>
                     <p className="text-xs text-zinc-500">Role</p>
-                    <p className="text-sm font-medium text-zinc-900 mt-0.5 capitalize">
-                      {profile.role === 'gm' ? 'General Manager' : profile.role}
+                    <p className="text-sm font-medium text-zinc-900 mt-0.5">
+                      {formatRole(profile.role)}
                     </p>
                   </div>
                 </div>
@@ -132,7 +136,7 @@ function ProfilePage() {
                 <Button 
                   type="submit" 
                   disabled={isUpdating || (!newPassword && fullName === profile.full_name)}
-                  className="bg-[#a31e22] hover:bg-[#82181b] text-white shadow-none"
+                  className="bg-[#C41E3A] hover:bg-[#a01830] text-white shadow-none"
                 >
                   {isUpdating ? 'Saving...' : 'Save Changes'}
                 </Button>

@@ -10,7 +10,7 @@ export function ErrorState({ message = 'Something went wrong. Please try again.'
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-red-50">
-        <AlertCircle size={22} className="text-[#a31e22]" />
+        <AlertCircle size={22} className="text-[#C41E3A]" />
       </div>
       <div className="space-y-1">
         <h3 className="text-sm font-medium text-zinc-900">Something went wrong</h3>

@@ -60,10 +60,7 @@ export function LoginPage() {
   return (
     <div className="flex min-h-[100dvh]">
       {/* ── Left branding panel (desktop only) ── */}
-      <div
-        className="relative hidden flex-col md:flex md:w-[45%]"
-        style={{ backgroundColor: '#0a0a0a' }}
-      >
+      <div className="relative hidden flex-col bg-[#0a0a0a] md:flex md:w-[45%]">
         <div className="flex flex-1 flex-col items-center justify-center px-12">
           <img
             src="/treal-logo.png"
@@ -77,10 +74,7 @@ export function LoginPage() {
         </div>
 
         <div className="px-12 pb-10 text-center">
-          <p
-            className="text-xs text-white/25"
-            style={{ letterSpacing: '0.1em' }}
-          >
+          <p className="text-xs tracking-[0.1em] text-white/25">
             © {new Date().getFullYear()} Treal Hotels &amp; Suites
           </p>
         </div>

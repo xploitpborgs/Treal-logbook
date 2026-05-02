@@ -47,6 +47,14 @@ export const gmCategoryLabels: Record<string, string> = {
   general:      'General',
 }
 
+export const staffCategoryLabels: Record<string, string> = {
+  instruction:   'Instruction',
+  safety:        'Safety',
+  training:      'Training',
+  announcement:  'Announcement',
+  general:       'General',
+}
+
 export const priorityLabels: Record<string, string> = {
   low:    'Low',
   medium: 'Medium',

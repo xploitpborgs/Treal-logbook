@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, useCallback } from 'react'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -119,7 +120,9 @@ function AllIssuesPage() {
     setLoading(false)
   }, [buildQuery, sortField, sortDir])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setPage(0) }, [search, department, priority, status, sortField, sortDir])
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { fetchIssues() }, [fetchIssues])
 
   const handleSort = (field: 'created_at' | 'priority') => {

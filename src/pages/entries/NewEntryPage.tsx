@@ -75,7 +75,7 @@ const PRIORITY_STYLES: Record<Priority, { selected: string; unselected: string }
     unselected: 'bg-white text-zinc-700 border-zinc-300 hover:border-zinc-400',
   },
   urgent: {
-    selected: 'bg-[#a31e22] text-white border-[#a31e22]',
+    selected: 'bg-[#C41E3A] text-white border-[#C41E3A]',
     unselected: 'bg-white text-zinc-700 border-zinc-300 hover:border-zinc-400',
   },
 }
@@ -177,7 +177,6 @@ export function NewEntryPage() {
             <ChevronLeft className="mr-1 h-4 w-4" />
             Back to Dashboard
           </button>
-          <h1 className="text-xl font-semibold text-zinc-900">New Log Entry</h1>
           <p className="mt-0.5 text-sm text-zinc-500">
             Log a shift event, incident, handover or maintenance note
           </p>
@@ -220,7 +219,7 @@ export function NewEntryPage() {
                                 <a
                                   key={issue.id}
                                   href={`/entries/${issue.id}`}
-                                  className="flex items-center gap-2 text-sm text-[#a31e22] hover:underline"
+                                  className="flex items-center gap-2 text-sm text-[#C41E3A] hover:underline"
                                 >
                                   <MessageSquare className="h-3.5 w-3.5" />
                                   {issue.title}
@@ -245,22 +244,28 @@ export function NewEntryPage() {
               <FormField
                 control={form.control}
                 name="department"
-                rules={{ required: 'Please select a department' }}
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {(Object.entries(DEPT_LABELS) as [Department, string][]).map(([val, label]) => (
-                          <SelectItem key={val} value={val}>{label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    {profile?.role === 'system_admin' ? (
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {(Object.entries(DEPT_LABELS) as [Department, string][]).map(([val, label]) => (
+                            <SelectItem key={val} value={val}>{label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <div className="flex h-10 w-full items-center rounded-md border border-input bg-zinc-50 px-3 py-2 text-sm text-zinc-600">
+                        {DEPT_LABELS[field.value as keyof typeof DEPT_LABELS] ?? field.value}
+                        <input type="hidden" {...field} />
+                      </div>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}
@@ -388,7 +393,7 @@ export function NewEntryPage() {
                 <Button
                   type="submit"
                   disabled={isSubmitting}
-                  className="bg-[#a31e22] text-white hover:bg-[#82181b]"
+                  className="bg-[#C41E3A] text-white hover:bg-[#a01830]"
                 >
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   {isSubmitting ? 'Submitting…' : 'Submit Entry'}
@@ -412,7 +417,7 @@ export function NewEntryPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Keep editing</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-[#a31e22] text-white hover:bg-[#82181b]"
+              className="bg-[#C41E3A] text-white hover:bg-[#a01830]"
               onClick={() => {
                 setDiscardOpen(false)
                 if (pendingNav) navigate({ to: pendingNav as '/dashboard' })

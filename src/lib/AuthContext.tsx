@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect, createContext, useContext, type ReactNode } from 'react'
 import { supabase } from '@/lib/supabase'
 import { logSecurityEvent } from '@/lib/security'

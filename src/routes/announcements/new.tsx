@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { useState, useEffect } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { AppLayout } from '@/components/layout/AppLayout'
@@ -18,75 +18,81 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { supervisorCategoryLabels, staffCategoryLabels, departmentLabels } from '@/lib/formatters'
+import { gmCategoryLabels, hrCategoryLabels, supervisorCategoryLabels, staffCategoryLabels, departmentLabels } from '@/lib/formatters'
 import { logAudit } from '@/lib/auditLogger'
-import { notifyManagement, notifyDepartment, createNotification, notifyRole } from '@/lib/notifications'
+import { notifyManagement, notifyDepartment, createNotification } from '@/lib/notifications'
 import { Info } from 'lucide-react'
 
-export const Route = createFileRoute('/supervisor-update/new')({
-  component: SupervisorUpdateNew,
+export const Route = createFileRoute('/announcements/new')({
+  component: UnifiedAnnouncementNew,
 })
 
 const schema = z.object({
-  type:             z.enum(['gm', 'hr', 'supervisors', 'staff']),
+  type:             z.enum(['gm', 'hr', 'department', 'staff']),
+  department:       z.string().optional(),
   target_staff_id:  z.string().optional(),
   title:            z.string().min(5, 'Title must be at least 5 characters').max(150),
   category:         z.string().min(1, 'Please select a category'),
   priority:         z.string().min(1, 'Please select a priority'),
   body:             z.string().min(20, 'Details must be at least 20 characters'),
+  is_pinned:        z.boolean(),
 })
 
 type FormData = z.infer<typeof schema>
 
-function SupervisorUpdateNew() {
+function UnifiedAnnouncementNew() {
   const navigate = useNavigate()
-  const { profile, isSupervisor, isAdmin } = useRole()
+  const { profile, isAdmin, isGM, isHR, isSupervisor } = useRole()
   const [discardOpen, setDiscardOpen] = useState(false)
-  const [staffList, setStaffList] = useState<Profile[]>([])
-
-  useEffect(() => {
-    if (profile && !isSupervisor() && !isAdmin()) {
-      toast.error('Only supervisors can post operational updates.')
-      navigate({ to: '/dashboard' })
-    }
-  }, [profile])
-
-  useEffect(() => {
-    if (!profile?.department) return
-    async function fetchStaff() {
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('department', profile?.department)
-        .eq('is_active', true)
-        .order('full_name')
-      if (data) setStaffList(data)
-    }
-    fetchStaff()
-  }, [profile?.department])
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      type: 'staff',
+      type: isAdmin() ? 'gm' : isGM() ? 'gm' : isHR() ? 'hr' : 'department',
+      department: profile?.department ?? '',
       target_staff_id: 'all',
       title: '',
       category: 'general',
       priority: 'medium',
       body: '',
+      is_pinned: false,
     },
   })
 
-  const { formState: { isDirty, isSubmitting }, watch } = form
+  const [staffList, setStaffList] = useState<Profile[]>([])
+
+  useEffect(() => {
+    async function fetchStaff() {
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .in('role', ['staff', 'supervisor', 'hr', 'gm'])
+        .eq('is_active', true)
+        .order('full_name')
+      if (data) setStaffList(data)
+    }
+    fetchStaff()
+  }, [])
+
+  const { formState: { isDirty, isSubmitting }, watch, setValue } = form
   const typeValue = watch('type')
   const titleLen = watch('title').length
   const bodyLen = watch('body').length
+
+  // Access control
+  useEffect(() => {
+    if (profile && !isAdmin() && !isGM() && !isHR() && !isSupervisor()) {
+      toast.error('You do not have permission to post announcements.')
+      navigate({ to: '/dashboard' })
+    }
+  }, [profile])
 
   function tryLeave() {
     if (isDirty) setDiscardOpen(true)
@@ -106,25 +112,20 @@ function SupervisorUpdateNew() {
     }
 
     if (values.type === 'gm') {
-      table = 'supervisor_updates'
-      payload.target_audiences = ['gm']
-      payload.department = profile.department
-      payload.team = profile.department
+      table = 'gm_updates'
     } else if (values.type === 'hr') {
+      table = 'hr_updates'
+      payload.is_pinned = values.is_pinned
+    } else if (values.type === 'department') {
       table = 'supervisor_updates'
-      payload.target_audiences = ['hr']
-      payload.department = profile.department
-      payload.team = profile.department
-    } else if (values.type === 'supervisors') {
-      table = 'supervisor_updates'
-      payload.target_audiences = ['supervisors']
-      payload.department = profile.department
-      payload.team = profile.department
+      payload.team = values.department || profile.department
+      payload.department = values.department || profile.department
     } else {
       table = 'staff_updates'
-      payload.department = profile.department
       if (values.target_staff_id !== 'all') {
         payload.target_staff_id = values.target_staff_id
+      } else {
+        payload.department = values.department || profile.department
       }
     }
 
@@ -135,49 +136,40 @@ function SupervisorUpdateNew() {
       .single()
 
     if (error || !data) {
-      toast.error(`Failed to post update: ${error?.message || 'Unknown error'}`)
+      toast.error(`Failed to post ${values.type.toUpperCase()} update: ${error?.message || 'Unknown error'}`)
       return
     }
 
     await logAudit({
       actorId: profile.id,
       action: 'created',
-      entityType: values.type === 'staff' ? 'staff_update' : 'supervisor_update',
+      entityType: values.type === 'hr' ? 'hr_update' : values.type === 'gm' ? 'gm_update' : values.type === 'department' ? 'supervisor_update' : 'staff_update',
       entityId: data.id,
-      note: `Update posted as ${values.type}`,
+      note: `Unified announcement posted as ${values.type}`,
     })
 
-    // Notifications
-    if (values.type === 'gm') {
-      await notifyRole({
-        role: 'gm',
-        title: `Message for GM: ${values.title}`,
-        message: `${profile.full_name}: ${values.title}`,
-        type: 'general',
-        link: '/dashboard',
-        priority: values.priority as any
-      })
-    } else if (values.type === 'hr') {
-      await notifyRole({
-        role: 'hr',
-        title: `HR Update: ${values.title}`,
-        message: `${profile.full_name}: ${values.title}`,
-        type: 'general',
-        link: '/dashboard',
-        priority: values.priority as any
-      })
-    } else if (values.type === 'supervisors') {
+    // Trigger Notifications
+    if (values.type === 'gm' || values.type === 'hr') {
       await notifyManagement({
-        title: `Supervisor Sync: ${values.title}`,
-        message: `${profile.full_name} shared an update with all supervisors.`,
-        type: 'general',
+        title: values.type === 'gm' ? 'New GM Directive' : 'New HR Announcement',
+        message: `${profile.full_name}: ${values.title}`,
+        type: 'directive',
         link: '/dashboard',
         priority: values.priority as any
       })
-    } else {
+    } else if (values.type === 'department') {
+      await notifyDepartment({
+        department: values.department || profile.department,
+        title: 'Department Update',
+        message: `${profile.full_name}: ${values.title}`,
+        type: 'directive',
+        link: '/dashboard',
+        priority: values.priority as any
+      })
+    } else if (values.type === 'staff') {
       if (values.target_staff_id === 'all') {
         await notifyDepartment({
-          department: profile.department,
+          department: values.department || profile.department,
           title: 'Team Update',
           message: `${profile.full_name}: ${values.title}`,
           type: 'directive',
@@ -187,7 +179,7 @@ function SupervisorUpdateNew() {
       } else {
         await createNotification({
           userId: values.target_staff_id!,
-          title: 'Direct Message from Supervisor',
+          title: 'Direct Message',
           message: `${profile.full_name}: ${values.title}`,
           type: 'directive',
           link: '/dashboard',
@@ -196,19 +188,27 @@ function SupervisorUpdateNew() {
       }
     }
 
-    toast.success('Update shared successfully')
+    toast.success('Announcement posted successfully')
     navigate({ to: '/dashboard' })
   }
 
-  const categoryOptions = typeValue === 'staff' ? staffCategoryLabels : supervisorCategoryLabels
+  const categoryOptions = typeValue === 'gm'
+    ? gmCategoryLabels
+    : typeValue === 'hr'
+      ? hrCategoryLabels
+      : typeValue === 'staff'
+        ? staffCategoryLabels
+        : supervisorCategoryLabels
 
   return (
     <AppLayout>
       <div className="mx-auto max-w-xl w-full pb-12">
         <div className="mb-6">
-          <h1 className="text-xl font-semibold text-zinc-900 mb-1">Post Operational Update</h1>
+          <h1 className="text-xl font-semibold text-zinc-900 mb-1">Post Announcement</h1>
           <p className="text-sm text-muted-foreground">
-            Share instructions, directives, or news with your team or management.
+            {typeValue === 'gm' && 'Issue directives and announcements to supervisors and management.'}
+            {typeValue === 'hr' && 'Broadcast HR communications to supervisors and management.'}
+            {typeValue === 'department' && 'Share operational updates with your team or management.'}
           </p>
         </div>
 
@@ -218,15 +218,22 @@ function SupervisorUpdateNew() {
         <Alert className="mb-6 border-blue-200 bg-blue-50">
           <Info className="h-4 w-4 text-blue-600" />
           <AlertDescription className="text-blue-800">
-            {typeValue === 'gm' && 'ℹ️ This update will be visible ONLY to the General Manager.'}
-            {typeValue === 'hr' && 'ℹ️ This update will be visible ONLY to the HR Department.'}
-            {typeValue === 'supervisors' && 'ℹ️ This update will be visible to all Supervisors and Managers across all departments.'}
+            {typeValue === 'gm' && 'ℹ️ This directive will be visible to the General Manager, all supervisors and management.'}
+            {typeValue === 'hr' && 'ℹ️ This announcement will be visible to HR, all supervisors and management.'}
+            {typeValue === 'department' && (
+              <>
+                ℹ️ This update will be visible to the{' '}
+                <span className="font-semibold">
+                  {departmentLabels[watch('department') as keyof typeof departmentLabels] ?? 'selected department'}
+                </span>.
+              </>
+            )}
             {typeValue === 'staff' && (
               <>
                 ℹ️ This update will be visible to{' '}
                 <span className="font-semibold">
                   {watch('target_staff_id') === 'all' 
-                    ? `all personnel in ${departmentLabels[profile?.department as keyof typeof departmentLabels] ?? 'your department'}` 
+                    ? `all personnel in ${departmentLabels[watch('department') as keyof typeof departmentLabels] ?? 'the selected department'}` 
                     : staffList.find(s => s.id === watch('target_staff_id'))?.full_name ?? 'the selected person'}
                 </span>.
               </>
@@ -237,49 +244,54 @@ function SupervisorUpdateNew() {
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* Target Selection */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Announcement Type (Only for Admin & GM) */}
+            {(isAdmin() || isGM()) && (
               <FormField
                 control={form.control}
                 name="type"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Announcement Target</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
+                    <Select onValueChange={(v) => {
+                      field.onChange(v)
+                      setValue('category', 'general')
+                    }} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select target" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="gm">General Manager (GM)</SelectItem>
-                        <SelectItem value="hr">HR Department</SelectItem>
-                        <SelectItem value="supervisors">All Supervisors</SelectItem>
-                        <SelectItem value="staff">My Department Staff</SelectItem>
+                        <SelectItem value="gm">GM (General Manager Directive)</SelectItem>
+                        <SelectItem value="hr">HR (Human Resources update)</SelectItem>
+                        <SelectItem value="department">Supervisors / Managers</SelectItem>
+                        <SelectItem value="staff">Staff Members</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            )}
 
-              {typeValue === 'staff' && (
+            {/* Department / Staff selection */}
+            {(typeValue === 'department' || typeValue === 'staff') && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="target_staff_id"
+                  name="department"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Specific Recipient</FormLabel>
+                      <FormLabel>Target Department</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select recipient" />
+                            <SelectValue placeholder="Select department" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="all">Entire Department</SelectItem>
-                          {staffList.map(staff => (
-                            <SelectItem key={staff.id} value={staff.id}>{staff.full_name}</SelectItem>
+                          {Object.entries(departmentLabels).map(([v, l]) => (
+                            <SelectItem key={v} value={v}>{l}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -287,8 +299,37 @@ function SupervisorUpdateNew() {
                     </FormItem>
                   )}
                 />
-              )}
-            </div>
+
+                {typeValue === 'staff' && (
+                  <FormField
+                    control={form.control}
+                    name="target_staff_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Specific Staff Member</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select staff member" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="all">All Staff in Department</SelectItem>
+                            {staffList
+                              .filter(s => !watch('department') || s.department === watch('department'))
+                              .map(staff => (
+                                <SelectItem key={staff.id} value={staff.id}>{staff.full_name}</SelectItem>
+                              ))
+                            }
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
+            )}
 
             {/* Title */}
             <FormField
@@ -301,7 +342,7 @@ function SupervisorUpdateNew() {
                     <span className="text-xs text-muted-foreground">{titleLen}/150</span>
                   </div>
                   <FormControl>
-                    <Input placeholder="Brief summary of the update..." maxLength={150} {...field} />
+                    <Input placeholder="Brief summary of the announcement..." maxLength={150} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -380,6 +421,23 @@ function SupervisorUpdateNew() {
               )}
             />
 
+            {/* Pin toggle (Only for HR) */}
+            {typeValue === 'hr' && (
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-zinc-900">Pin this update</p>
+                  <p className="text-xs text-muted-foreground">Pinned updates appear at the top of all feeds</p>
+                </div>
+                <Controller
+                  name="is_pinned"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  )}
+                />
+              </div>
+            )}
+
             <Separator />
 
             <div className="flex justify-end gap-3">
@@ -387,7 +445,7 @@ function SupervisorUpdateNew() {
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting} className="bg-[#C41E3A] hover:bg-[#a01830] text-white">
-                {isSubmitting ? 'Sharing…' : `Post ${typeValue.toUpperCase()} Update`}
+                {isSubmitting ? 'Posting…' : `Post ${typeValue.toUpperCase()} Announcement`}
               </Button>
             </div>
           </form>
@@ -397,7 +455,7 @@ function SupervisorUpdateNew() {
       <AlertDialog open={discardOpen} onOpenChange={setDiscardOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Discard update?</AlertDialogTitle>
+            <AlertDialogTitle>Discard announcement?</AlertDialogTitle>
             <AlertDialogDescription>You have unsaved changes. Are you sure you want to leave?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

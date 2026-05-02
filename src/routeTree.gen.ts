@@ -11,16 +11,19 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SecurityRouteImport } from './routes/security'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PerformanceRouteImport } from './routes/performance'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as IssuesIndexRouteImport } from './routes/issues/index'
 import { Route as SupervisorUpdateNewRouteImport } from './routes/supervisor-update/new'
+import { Route as ReportsHandoverRouteImport } from './routes/reports/handover'
 import { Route as IssuesNewRouteImport } from './routes/issues/new'
 import { Route as IssuesIssueIdRouteImport } from './routes/issues/$issueId'
 import { Route as HrUpdateNewRouteImport } from './routes/hr-update/new'
 import { Route as GmUpdateNewRouteImport } from './routes/gm-update/new'
+import { Route as AnnouncementsNewRouteImport } from './routes/announcements/new'
 import { Route as IssuesIssueIdEditRouteImport } from './routes/issues/$issueId.edit'
 
 const SecurityRoute = SecurityRouteImport.update({
@@ -31,6 +34,11 @@ const SecurityRoute = SecurityRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PerformanceRoute = PerformanceRouteImport.update({
+  id: '/performance',
+  path: '/performance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -63,6 +71,11 @@ const SupervisorUpdateNewRoute = SupervisorUpdateNewRouteImport.update({
   path: '/supervisor-update/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ReportsHandoverRoute = ReportsHandoverRouteImport.update({
+  id: '/reports/handover',
+  path: '/reports/handover',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IssuesNewRoute = IssuesNewRouteImport.update({
   id: '/issues/new',
   path: '/issues/new',
@@ -83,6 +96,11 @@ const GmUpdateNewRoute = GmUpdateNewRouteImport.update({
   path: '/gm-update/new',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnnouncementsNewRoute = AnnouncementsNewRouteImport.update({
+  id: '/announcements/new',
+  path: '/announcements/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IssuesIssueIdEditRoute = IssuesIssueIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -94,12 +112,15 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/performance': typeof PerformanceRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
   '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
+  '/reports/handover': typeof ReportsHandoverRoute
   '/supervisor-update/new': typeof SupervisorUpdateNewRoute
   '/issues/': typeof IssuesIndexRoute
   '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
@@ -109,12 +130,15 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/performance': typeof PerformanceRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
   '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
+  '/reports/handover': typeof ReportsHandoverRoute
   '/supervisor-update/new': typeof SupervisorUpdateNewRoute
   '/issues': typeof IssuesIndexRoute
   '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
@@ -125,12 +149,15 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/dashboard': typeof DashboardRoute
   '/login': typeof LoginRoute
+  '/performance': typeof PerformanceRoute
   '/profile': typeof ProfileRoute
   '/security': typeof SecurityRoute
+  '/announcements/new': typeof AnnouncementsNewRoute
   '/gm-update/new': typeof GmUpdateNewRoute
   '/hr-update/new': typeof HrUpdateNewRoute
   '/issues/$issueId': typeof IssuesIssueIdRouteWithChildren
   '/issues/new': typeof IssuesNewRoute
+  '/reports/handover': typeof ReportsHandoverRoute
   '/supervisor-update/new': typeof SupervisorUpdateNewRoute
   '/issues/': typeof IssuesIndexRoute
   '/issues/$issueId/edit': typeof IssuesIssueIdEditRoute
@@ -142,12 +169,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/performance'
     | '/profile'
     | '/security'
+    | '/announcements/new'
     | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
+    | '/reports/handover'
     | '/supervisor-update/new'
     | '/issues/'
     | '/issues/$issueId/edit'
@@ -157,12 +187,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/performance'
     | '/profile'
     | '/security'
+    | '/announcements/new'
     | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
+    | '/reports/handover'
     | '/supervisor-update/new'
     | '/issues'
     | '/issues/$issueId/edit'
@@ -172,12 +205,15 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/login'
+    | '/performance'
     | '/profile'
     | '/security'
+    | '/announcements/new'
     | '/gm-update/new'
     | '/hr-update/new'
     | '/issues/$issueId'
     | '/issues/new'
+    | '/reports/handover'
     | '/supervisor-update/new'
     | '/issues/'
     | '/issues/$issueId/edit'
@@ -188,12 +224,15 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   DashboardRoute: typeof DashboardRoute
   LoginRoute: typeof LoginRoute
+  PerformanceRoute: typeof PerformanceRoute
   ProfileRoute: typeof ProfileRoute
   SecurityRoute: typeof SecurityRoute
+  AnnouncementsNewRoute: typeof AnnouncementsNewRoute
   GmUpdateNewRoute: typeof GmUpdateNewRoute
   HrUpdateNewRoute: typeof HrUpdateNewRoute
   IssuesIssueIdRoute: typeof IssuesIssueIdRouteWithChildren
   IssuesNewRoute: typeof IssuesNewRoute
+  ReportsHandoverRoute: typeof ReportsHandoverRoute
   SupervisorUpdateNewRoute: typeof SupervisorUpdateNewRoute
   IssuesIndexRoute: typeof IssuesIndexRoute
 }
@@ -212,6 +251,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/performance': {
+      id: '/performance'
+      path: '/performance'
+      fullPath: '/performance'
+      preLoaderRoute: typeof PerformanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -256,6 +302,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SupervisorUpdateNewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/reports/handover': {
+      id: '/reports/handover'
+      path: '/reports/handover'
+      fullPath: '/reports/handover'
+      preLoaderRoute: typeof ReportsHandoverRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/issues/new': {
       id: '/issues/new'
       path: '/issues/new'
@@ -282,6 +335,13 @@ declare module '@tanstack/react-router' {
       path: '/gm-update/new'
       fullPath: '/gm-update/new'
       preLoaderRoute: typeof GmUpdateNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/announcements/new': {
+      id: '/announcements/new'
+      path: '/announcements/new'
+      fullPath: '/announcements/new'
+      preLoaderRoute: typeof AnnouncementsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/issues/$issueId/edit': {
@@ -311,12 +371,15 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   DashboardRoute: DashboardRoute,
   LoginRoute: LoginRoute,
+  PerformanceRoute: PerformanceRoute,
   ProfileRoute: ProfileRoute,
   SecurityRoute: SecurityRoute,
+  AnnouncementsNewRoute: AnnouncementsNewRoute,
   GmUpdateNewRoute: GmUpdateNewRoute,
   HrUpdateNewRoute: HrUpdateNewRoute,
   IssuesIssueIdRoute: IssuesIssueIdRouteWithChildren,
   IssuesNewRoute: IssuesNewRoute,
+  ReportsHandoverRoute: ReportsHandoverRoute,
   SupervisorUpdateNewRoute: SupervisorUpdateNewRoute,
   IssuesIndexRoute: IssuesIndexRoute,
 }

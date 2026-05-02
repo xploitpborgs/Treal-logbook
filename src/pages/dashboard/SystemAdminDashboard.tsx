@@ -19,7 +19,7 @@ function buildQuery(filters: FilterState) {
   const now = new Date()
   let q = supabase
     .from('log_entries')
-    .select('*, author:profiles!author_id(id, full_name, avatar_url, department)')
+    .select('*, author:profiles!author_id(id, full_name, avatar_url, department), assignee:profiles!assigned_to(id, full_name, avatar_url)')
     .order('created_at', { ascending: false })
 
   if (filters.department !== 'all') q = q.eq('department', filters.department)
